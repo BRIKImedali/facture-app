@@ -45,6 +45,12 @@ const Layout = () => {
             <span className="nav-icon">🧾</span>
             <span>Factures</span>
           </NavLink>
+          {user?.role === 'ADMIN' && (
+            <NavLink to="/admin" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={closeSidebar} style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
+              <span className="nav-icon">⚙️</span>
+              <span style={{color: '#667eea', fontWeight: 'bold'}}>Administration</span>
+            </NavLink>
+          )}
         </nav>
 
         {/* Infos utilisateur + déconnexion */}

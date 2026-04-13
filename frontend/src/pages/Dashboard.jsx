@@ -96,7 +96,7 @@ const Dashboard = () => {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} tickFormatter={(value) => `${value} TND`} />
-                  <Tooltip 
+                  <Tooltip
                     cursor={{ fill: '#f8fafc' }}
                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
                     formatter={(value) => [`${value} TND`, 'Chiffre d\'affaires']}
@@ -113,7 +113,7 @@ const Dashboard = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {stats?.topClients && stats.topClients.length > 0 ? (
                 stats.topClients.map((client, idx) => (
-                  <div key={client.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: idx !== stats.topClients.length -1 ? '1px solid #f1f5f9' : 'none' }}>
+                  <div key={client.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: idx !== stats.topClients.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#f8fafc', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px', border: '1px solid #e2e8f0' }}>
                         {client.nom.substring(0, 2).toUpperCase()}

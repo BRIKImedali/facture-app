@@ -48,12 +48,6 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Base de données H2 en mémoire (pour les tests) -->
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>runtime</scope>
-        </dependency>
 
         <!-- Template Engine (Thymeleaf) pour la génération PDF -->
         <dependency>
@@ -112,6 +106,31 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
+
+        <!-- ===== MODULE ADMIN — Nouvelles dépendances ===== -->
+
+        <!-- Spring AOP — requis pour @Aspect et @Auditable -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+
+        <!-- Jackson ObjectMapper — requis par AuditAspect pour sérialisation JSON -->
+        <!-- Déjà inclus dans spring-boot-starter-web, déclaré explicitement pour clarté -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- MySQL Driver (optionnel — pour test connexion BDD MySQL via DatabaseConfigService) -->
+        <!-- Décommenter si vous utilisez MySQL comme profil de test -->
+        <!--
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        -->
 
         <!-- Tests -->
         <dependency>

@@ -1,10 +1,14 @@
+// SecurityConfig.java — Configuration Spring Security mise à jour avec CustomPermissionEvaluator
 package com.pfe.facturation.security.config;
 
+import com.pfe.facturation.security.CustomPermissionEvaluator;
 import com.pfe.facturation.security.jwt.JwtAuthenticationFilter;
 import com.pfe.facturation.security.service.UserDetailsServiceImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -26,68 +30,70 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Configuration principale de Spring Security.
+ * Configuration Spring Security mise à jour.
  *
- * Points clés :
- * - JWT = Stateless (pas de session HTTP → STATELESS)
- * - CSRF désactivé (pas nécessaire avec JWT, et ça bloquerait les appels API)
- * - Routes publiques : /api/auth/** (login, register) et Swagger
- * - Toutes les autres routes nécessitent un token JWT valide
- * - BCrypt pour hasher les mots de passe (jamais en clair en base)
+ * Changements par rapport à la version précédente :
+ * - Ajout du CustomPermissionEvaluator pour supporter @PreAuthorize("hasPermission(...)")
+ * - Protection des endpoints /api/admin/** avec hasRole('ADMIN')
+ * - Le MethodSecurityExpressionHandler est configuré avec notre évaluateur personnalisé
  */
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // Permet d'utiliser @PreAuthorize("hasRole('ADMIN')") sur les méthodes
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsServiceImpl userDetailsService;
+    private final CustomPermissionEvaluator customPermissionEvaluator;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter,
-                          UserDetailsServiceImpl userDetailsService) {
+                          UserDetailsServiceImpl userDetailsService,
+                          CustomPermissionEvaluator customPermissionEvaluator) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.userDetailsService = userDetailsService;
+        this.customPermissionEvaluator = customPermissionEvaluator;
     }
 
     /**
-     * Définit les règles de sécurité pour chaque route HTTP.
+     * Configure le MethodSecurityExpressionHandler avec notre CustomPermissionEvaluator.
+     * C'est ce bean qui permet l'utilisation de hasPermission() dans @PreAuthorize.
+     */
+    @Bean
+    public MethodSecurityExpressionHandler methodSecurityExpressionHandler() {
+        DefaultMethodSecurityExpressionHandler handler = new DefaultMethodSecurityExpressionHandler();
+        handler.setPermissionEvaluator(customPermissionEvaluator);
+        return handler;
+    }
+
+    /**
+     * Définit les règles de sécurité HTTP.
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            // 1. Désactiver CSRF (pas nécessaire avec JWT stateless)
             .csrf(AbstractHttpConfigurer::disable)
-
-            // 2. Définir les autorisations par route
             .authorizeHttpRequests(auth -> auth
-                // Routes publiques : tout le monde peut y accéder
+                // Routes publiques
                 .requestMatchers("/api/auth/**").permitAll()
-                // Swagger UI (pour la doc)
+                // Swagger UI
                 .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()
-                // Routes réservées aux admins
+                // Routes admin — doivent être authentifiées (permissions vérifiées par @PreAuthorize)
+                .requestMatchers("/api/admin/**").authenticated()
+                // Suppression réservée aux ADMIN
                 .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasRole("ADMIN")
-                // Toutes les autres routes nécessitent d'être authentifié
+                // Toutes les autres routes
                 .anyRequest().authenticated()
             )
-
-            // 3. Mode Stateless : pas de session HTTP côté serveur
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-
-            // 4. Définir notre provider d'authentification personnalisé
             .authenticationProvider(authenticationProvider())
-
-            // 5. Ajouter notre filtre JWT AVANT le filtre d'authentification standard
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    /**
-     * Provider qui utilise notre UserDetailsService + BCrypt pour authentifier.
-     */
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
@@ -95,19 +101,11 @@ public class SecurityConfig {
         return provider;
     }
 
-    /**
-     * BCryptPasswordEncoder : hash sécurisé des mots de passe.
-     * Niveau 10 (force 10 = bon équilibre sécurité/performance)
-     * JAMAIS stocker un mot de passe en clair !
-     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(10);
     }
 
-    /**
-     * AuthenticationManager : utilisé dans le AuthController pour authentifier.
-     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
@@ -118,7 +116,8 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept",
+            "Accept-Language", "X-Requested-With"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
