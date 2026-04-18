@@ -42,7 +42,6 @@ public class Produit {
      * Exemples : 20.0 (taux normal), 10.0 (taux réduit), 0.0 (exonéré)
      */
     @Builder.Default
-    @Column(nullable = false)
     private Double tauxTva = 20.0;
 
     /** Unité de mesure : "unité", "heure", "jour", "kg", "mois"... */
@@ -51,6 +50,5 @@ public class Produit {
 
     /** Produit actif = disponible pour la facturation */
     @Builder.Default
-    @Column(nullable = false)
     private Boolean actif = true;
 }

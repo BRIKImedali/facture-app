@@ -89,6 +89,7 @@ public class User implements UserDetails {
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
