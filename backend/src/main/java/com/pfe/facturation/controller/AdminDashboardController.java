@@ -80,7 +80,7 @@ public class AdminDashboardController {
             .limit(5)
             .map(log -> Map.of(
                 "id", log.getId(),
-                "userEmail", log.getUserEmail() != null ? log.getUserEmail() : "SYSTEM",
+                "username", log.getUsername() != null ? log.getUsername() : "SYSTEM",
                 "actionType", log.getActionType(),
                 "entityType", log.getEntityType() != null ? log.getEntityType() : "",
                 "createdAt", log.getCreatedAt()

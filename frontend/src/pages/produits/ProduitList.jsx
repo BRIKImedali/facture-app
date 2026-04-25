@@ -102,7 +102,7 @@ const ProduitList = () => {
                   <td><strong>{p.nom}</strong>{p.description && <p style={{ margin: 0, fontSize: '0.78rem', color: '#94a3b8' }}>{p.description.substring(0, 60)}{p.description.length > 60 ? '...' : ''}</p>}</td>
                   <td><strong>{Number(p.prixHT).toFixed(2)} TND</strong></td>
                   <td>{p.tauxTva}%</td>
-                  <td>{p.unite}</td>
+                  <td>{p.unite?.nom || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
                   <td>
                     <span className={`badge ${p.actif ? 'badge-payee' : 'badge-annulee'}`}>{p.actif ? '✓ Actif' : '✗ Inactif'}</span>
                   </td>

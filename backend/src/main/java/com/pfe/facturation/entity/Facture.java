@@ -13,6 +13,10 @@ import java.util.List;
 /**
  * Entité Facture — document comptable principal de l'application.
  *
+ * Changements v2:
+ * - Ajout de paymentMethod (PaymentMethod enum) pour le mode de paiement.
+ *   Stocké en STRING pour la lisibilité en base.
+ *
  * Chaque facture est liée à :
  *  - Un Client (le destinataire)
  *  - Un User (le créateur)
@@ -52,6 +56,15 @@ public class Facture {
     @Column(nullable = false)
     @Builder.Default
     private StatutFacture statut = StatutFacture.BROUILLON;
+
+    /**
+     * Mode de paiement de la facture.
+     * Valeurs : ESPECES (cash), VIREMENT (bank transfer), CHEQUE (check).
+     * Null si non encore défini (facture en brouillon).
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", length = 20)
+    private PaymentMethod paymentMethod;
 
     /** Date de création / émission de la facture */
     @Column(nullable = false, updatable = false)

@@ -20,7 +20,7 @@ const AuditLog = () => {
   const [selectedLog, setSelectedLog] = useState(null);
   const [pagination, setPagination] = useState({ page: 0, size: 20, total: 0, totalPages: 0 });
   const [filters, setFilters] = useState({
-    userEmail: '', actionType: '', entityType: '', startDate: '', endDate: ''
+    username: '', actionType: '', entityType: '', startDate: '', endDate: ''
   });
 
   useEffect(() => { loadLogs(); }, [pagination.page]);
@@ -29,7 +29,7 @@ const AuditLog = () => {
     try {
       setLoading(true);
       const params = {};
-      if (filters.userEmail) params.userEmail = filters.userEmail;
+      if (filters.username) params.username = filters.username;
       if (filters.actionType) params.actionType = filters.actionType;
       if (filters.entityType) params.entityType = filters.entityType;
       if (filters.startDate) params.startDate = filters.startDate + ':00';
@@ -61,7 +61,7 @@ const AuditLog = () => {
   };
 
   const clearFilters = () => {
-    setFilters({ userEmail: '', actionType: '', entityType: '', startDate: '', endDate: '' });
+    setFilters({ username: '', actionType: '', entityType: '', startDate: '', endDate: '' });
     setPagination(p => ({ ...p, page: 0 }));
     setTimeout(loadLogs, 50);
   };
@@ -118,8 +118,8 @@ const AuditLog = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
               <div className="form-group" style={{ margin: 0 }}>
                 <label className="form-label">{t('audit.filter_user')}</label>
-                <input className="form-input" placeholder="email@exemple.com"
-                  value={filters.userEmail} onChange={e => handleFilterChange('userEmail', e.target.value)} />
+                <input className="form-input" placeholder="Identifiant"
+                  value={filters.username} onChange={e => handleFilterChange('username', e.target.value)} />
               </div>
               <div className="form-group" style={{ margin: 0 }}>
                 <label className="form-label">{t('audit.filter_action')}</label>
@@ -184,7 +184,7 @@ const AuditLog = () => {
                 {logs.map(log => (
                   <tr key={log.id}>
                     <td style={{ fontSize: 11, color: 'var(--admin-text-muted)' }}>#{log.id}</td>
-                    <td style={{ fontSize: 12, fontFamily: 'monospace' }}>{log.userEmail || 'SYSTEM'}</td>
+                    <td style={{ fontSize: 12, fontFamily: 'monospace' }}>{log.username || 'SYSTEM'}</td>
                     <td>
                       <span className={`badge badge-${ACTION_COLORS[log.actionType] || 'muted'}`}>
                         {t(`audit.actions.${log.actionType}`, { defaultValue: log.actionType })}
@@ -242,7 +242,7 @@ const AuditLog = () => {
             </div>
             <div className="modal-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <Detail label="Utilisateur" value={selectedLog.userEmail || 'SYSTEM'} />
+                <Detail label="Utilisateur" value={selectedLog.username || 'SYSTEM'} />
                 <Detail label="Action" value={<span className={`badge badge-${ACTION_COLORS[selectedLog.actionType] || 'muted'}`}>{selectedLog.actionType}</span>} />
                 <Detail label="Entité" value={selectedLog.entityType || '—'} />
                 <Detail label="ID Entité" value={selectedLog.entityId || '—'} />

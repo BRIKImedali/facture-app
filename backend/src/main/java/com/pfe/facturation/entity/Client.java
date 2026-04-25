@@ -9,6 +9,9 @@ import java.time.LocalDateTime;
 
 /**
  * Entité Client — représente un client de l'entreprise.
+ *
+ * Changements v2:
+ * - Ajout de category (ManyToOne ClientCategory) pour classifier les clients.
  * Mappée sur la table "clients" en base de données.
  */
 @Entity
@@ -47,6 +50,17 @@ public class Client {
      * Equivalent du SIRET pour les entreprises marocaines.
      */
     private String ice;
+
+    /**
+     * Catégories du client (ex: Entreprise, Particulier, Administration).
+     */
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "client_categories_mapping",
+        joinColumns = @JoinColumn(name = "client_id"),
+        inverseJoinColumns = @JoinColumn(name = "categorie_id")
+    )
+    private java.util.List<CategorieClient> categories;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

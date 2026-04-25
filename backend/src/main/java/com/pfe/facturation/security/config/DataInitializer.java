@@ -24,7 +24,7 @@ public class DataInitializer {
                 User admin = User.builder()
                         .nom("Admin")
                         .prenom("Super")
-                        .email("admin@test.com")
+                        .username("admin")
                         .password(passwordEncoder.encode("admin123"))
                         .role(Role.ADMIN)
                         .build();
@@ -32,7 +32,7 @@ public class DataInitializer {
                 User user = User.builder()
                         .nom("User")
                         .prenom("Simple")
-                        .email("user@test.com")
+                        .username("user")
                         .password(passwordEncoder.encode("user123"))
                         .role(Role.USER)
                         .build();
@@ -41,8 +41,8 @@ public class DataInitializer {
                 userRepository.save(user);
 
                 log.info("Utilisateurs créés avec succès :");
-                log.info(" ADMIN : admin@test.com / admin123");
-                log.info(" USER  : user@test.com / user123");
+                log.info(" ADMIN : username=admin / password=admin123");
+                log.info(" USER  : username=user / password=user123");
             }
         };
     }

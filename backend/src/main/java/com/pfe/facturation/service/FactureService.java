@@ -149,6 +149,7 @@ public class FactureService {
                 .totalHT(totalHT.setScale(2, RoundingMode.HALF_UP))
                 .totalTva(totalTva.setScale(2, RoundingMode.HALF_UP))
                 .totalTTC(totalTTC.setScale(2, RoundingMode.HALF_UP))
+                .paymentMethod(request.paymentMethod() != null ? PaymentMethod.valueOf(request.paymentMethod()) : null)
                 .build();
 
         Facture saved = factureRepository.save(facture);
@@ -173,6 +174,9 @@ public class FactureService {
         validerTransition(ancienStatut, nouveauStatut);
 
         facture.setStatut(nouveauStatut);
+        if (request.paymentMethod() != null) {
+            facture.setPaymentMethod(PaymentMethod.valueOf(request.paymentMethod()));
+        }
         Facture saved = factureRepository.save(facture);
         log.info("Facture {} : statut changé de {} → {}", facture.getNumero(), ancienStatut, nouveauStatut);
         return toDTO(saved);
@@ -268,12 +272,13 @@ public class FactureService {
                 f.getDateEmission() != null ? f.getDateEmission().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null,
                 f.getDateEcheance() != null ? f.getDateEcheance().format(DATE_FMT) : null,
                 f.getNotes(),
-                f.getCreatedBy() != null ? f.getCreatedBy().getEmail() : null,
+                f.getCreatedBy() != null ? f.getCreatedBy().getUsername() : null,
                 f.getClient() != null ? clientService.toDTO(f.getClient()) : null,
                 lignesDTO,
                 f.getTotalHT(),
                 f.getTotalTva(),
-                f.getTotalTTC()
+                f.getTotalTTC(),
+                f.getPaymentMethod() != null ? f.getPaymentMethod().name() : null
         );
     }
 

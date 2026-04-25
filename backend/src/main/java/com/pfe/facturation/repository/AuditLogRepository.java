@@ -21,14 +21,14 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
     /** Logs d'audit paginés avec filtres multiples */
     @Query("SELECT al FROM AuditLog al WHERE " +
-           "(:userEmail IS NULL OR LOWER(al.userEmail) LIKE LOWER(CONCAT('%', :userEmail, '%'))) AND " +
+           "(:username IS NULL OR LOWER(al.username) LIKE LOWER(CONCAT('%', :username, '%'))) AND " +
            "(:actionType IS NULL OR al.actionType = :actionType) AND " +
            "(:entityType IS NULL OR al.entityType = :entityType) AND " +
            "(:startDate IS NULL OR al.createdAt >= :startDate) AND " +
            "(:endDate IS NULL OR al.createdAt <= :endDate) " +
            "ORDER BY al.createdAt DESC")
     Page<AuditLog> findWithFilters(
-        @Param("userEmail") String userEmail,
+        @Param("username") String username,
         @Param("actionType") String actionType,
         @Param("entityType") String entityType,
         @Param("startDate") LocalDateTime startDate,

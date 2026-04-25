@@ -34,14 +34,14 @@ public class AuditService {
      * À utiliser quand l'AOP ne suffit pas (ex: login/logout).
      */
     @Transactional
-    public AuditLog logAction(Long userId, String userEmail, String actionType,
+    public AuditLog logAction(Long userId, String username, String actionType,
                                String entityType, Long entityId,
                                String oldValue, String newValue,
                                String ipAddress, String description) {
         try {
             AuditLog auditLog = AuditLog.builder()
                 .userId(userId)
-                .userEmail(userEmail != null ? userEmail : "SYSTEM")
+                .username(username != null ? username : "SYSTEM")
                 .actionType(actionType)
                 .entityType(entityType)
                 .entityId(entityId)
@@ -70,11 +70,11 @@ public class AuditService {
      * @param size Taille de page
      * @return Page de logs d'audit
      */
-    public Page<AuditLog> getLogs(String userEmail, String actionType, String entityType,
+    public Page<AuditLog> getLogs(String username, String actionType, String entityType,
                                    LocalDateTime startDate, LocalDateTime endDate,
                                    int page, int size) {
         return auditLogRepository.findWithFilters(
-            userEmail, actionType, entityType, startDate, endDate,
+            username, actionType, entityType, startDate, endDate,
             PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
         );
     }

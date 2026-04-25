@@ -46,7 +46,7 @@ public class AuditAspect {
     @Around("@annotation(auditable)")
     public Object auditMethod(ProceedingJoinPoint joinPoint, Auditable auditable) throws Throwable {
         // Récupérer les informations de l'utilisateur connecté
-        String userEmail = getCurrentUserEmail();
+        String username = getCurrentUsername();
         Long userId = getCurrentUserId();
         String ipAddress = getClientIpAddress();
 
@@ -87,7 +87,7 @@ public class AuditAspect {
 
                 AuditLog auditLog = AuditLog.builder()
                     .userId(userId)
-                    .userEmail(userEmail)
+                    .username(username)
                     .actionType(auditable.action())
                     .entityType(auditable.entity())
                     .newValue(newValueJson)
@@ -104,16 +104,16 @@ public class AuditAspect {
     }
 
     /**
-     * Récupère l'email de l'utilisateur actuellement connecté.
+     * Récupère le username de l'utilisateur actuellement connecté.
      */
-    private String getCurrentUserEmail() {
+    private String getCurrentUsername() {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
                 return auth.getName();
             }
         } catch (Exception e) {
-            log.warn("Impossible de récupérer l'email de l'utilisateur : {}", e.getMessage());
+            log.warn("Impossible de récupérer le username de l'utilisateur : {}", e.getMessage());
         }
         return "SYSTEM";
     }

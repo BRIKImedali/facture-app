@@ -31,7 +31,7 @@ public class UserManagementController {
     public ResponseEntity<Map<String, Object>> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "email") String sortBy) {
+            @RequestParam(defaultValue = "username") String sortBy) {
         Page<User> usersPage = userManagementService.getAllUsers(page, size, sortBy);
         return ResponseEntity.ok(Map.of(
             "users", usersPage.getContent().stream().map(this::sanitizeUser).toList(),
@@ -55,6 +55,37 @@ public class UserManagementController {
     public ResponseEntity<Map<String, Object>> getUserById(@PathVariable Long id) {
         User user = userManagementService.getUserById(id);
         return ResponseEntity.ok(sanitizeUser(user));
+    }
+
+    /**
+     * POST /api/admin/users — Crée un nouvel utilisateur.
+     * Body : { username, password, nom, prenom, role }
+     */
+    @PostMapping
+    @PreAuthorize("hasPermission('USER', 'CREATE')")
+    public ResponseEntity<Map<String, Object>> createUser(
+            @RequestBody Map<String, Object> body) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<Integer> ids = (List<Integer>) body.getOrDefault("roleIds", List.of());
+            Set<Long> roleIds = new java.util.HashSet<>();
+            ids.forEach(rid -> roleIds.add(Long.valueOf(rid)));
+
+            User created = userManagementService.createUser(
+                (String) body.get("username"),
+                (String) body.get("password"),
+                roleIds,
+                (String) body.get("nom"),
+                (String) body.get("prenom")
+            );
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Utilisateur créé avec succès",
+                "user", sanitizeUser(created)
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
     }
 
     /** PUT /api/admin/users/{id} — Mise à jour des informations d'un utilisateur */
@@ -149,7 +180,7 @@ public class UserManagementController {
             "id", user.getId(),
             "nom", user.getNom() != null ? user.getNom() : "",
             "prenom", user.getPrenom() != null ? user.getPrenom() : "",
-            "email", user.getEmail(),
+            "username", user.getUsername(),
             "role", user.getRole().name(),
             "isActive", user.getIsActive() != null ? user.getIsActive() : true,
             "appRoles", user.getAppRoles() != null

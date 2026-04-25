@@ -32,7 +32,7 @@ public class AuditController {
      * GET /api/admin/audit/logs — Liste paginée des logs avec filtres.
      *
      * Paramètres de filtrage optionnels :
-     * - userEmail : filtre par email utilisateur
+     * - username : filtre par username utilisateur
      * - actionType : filtre par type d'action
      * - entityType : filtre par type d'entité
      * - startDate  : date de début (ISO 8601)
@@ -41,7 +41,7 @@ public class AuditController {
     @GetMapping("/logs")
     @PreAuthorize("hasPermission('SYSTEM', 'AUDIT')")
     public ResponseEntity<Map<String, Object>> getAuditLogs(
-            @RequestParam(required = false) String userEmail,
+            @RequestParam(required = false) String username,
             @RequestParam(required = false) String actionType,
             @RequestParam(required = false) String entityType,
             @RequestParam(required = false)
@@ -52,7 +52,7 @@ public class AuditController {
             @RequestParam(defaultValue = "20") int size) {
 
         Page<AuditLog> logsPage = auditService.getLogs(
-            userEmail, actionType, entityType, startDate, endDate, page, size
+            username, actionType, entityType, startDate, endDate, page, size
         );
 
         return ResponseEntity.ok(Map.of(

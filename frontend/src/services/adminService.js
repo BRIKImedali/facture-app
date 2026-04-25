@@ -14,7 +14,7 @@ export const dashboardService = {
 // ================================================================
 export const userService = {
   /** Liste paginée des utilisateurs */
-  getAll: (page = 0, size = 20, sortBy = 'email') =>
+  getAll: (page = 0, size = 20, sortBy = 'username') =>
     api.get('/admin/users', { params: { page, size, sortBy } }),
 
   /** Recherche d'utilisateurs */
@@ -22,6 +22,9 @@ export const userService = {
 
   /** Détail d'un utilisateur */
   getById: (id) => api.get(`/admin/users/${id}`),
+
+  /** Créer un utilisateur */
+  create: (data) => api.post('/admin/users', data),
 
   /** Mise à jour des informations */
   update: (id, data) => api.put(`/admin/users/${id}`, data),
@@ -93,6 +96,9 @@ export const databaseService = {
 
   /** Active un profil */
   activate: (id) => api.post(`/admin/database/profiles/${id}/activate`),
+  /** Génère le fichier .properties et reconnecte automatiquement */
+  generatePropertiesAndReconnect: (form) =>
+    api.post('/admin/database/generate-properties', form),
 };
 
 // ================================================================
@@ -131,7 +137,7 @@ export const erpService = {
 export const auditService = {
   /**
    * Liste paginée des logs avec filtres.
-   * @param {Object} filters - { userEmail, actionType, entityType, startDate, endDate }
+   * @param {Object} filters - { username, actionType, entityType, startDate, endDate }
    * @param {number} page  - Numéro de page
    * @param {number} size  - Taille de page
    */

@@ -134,6 +134,7 @@ const RoleManagement = () => {
   const entityIcons = {
     FACTURE: '🧾', CLIENT: '👤', PRODUIT: '📦',
     USER: '👥', ROLE: '🔐', SYSTEM: '⚙️',
+    UNITE: '📏', CATEGORIE: '🏷️',
   };
 
   return (

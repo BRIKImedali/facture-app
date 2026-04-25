@@ -71,7 +71,7 @@ public class XmlExportService {
                 f.getDateEmission() != null ? f.getDateEmission().format(DT_FMT) : null,
                 f.getDateEcheance() != null ? f.getDateEcheance().format(DATE_FMT) : null,
                 f.getNotes(),
-                f.getCreatedBy() != null ? f.getCreatedBy().getEmail() : null,
+                f.getCreatedBy() != null ? f.getCreatedBy().getUsername() : null,
                 toClientInfo(f.getClient()),
                 toLignes(f.getLignes()),
                 f.getTotalHT(),

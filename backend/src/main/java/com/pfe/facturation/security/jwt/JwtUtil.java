@@ -49,18 +49,24 @@ public class JwtUtil {
      * Le token contient : l'email (subject) + date d'expiration + signature
      */
     public String generateToken(UserDetails userDetails) {
-        return Jwts.builder()
-                .subject(userDetails.getUsername()) // username = email
+        var builder = Jwts.builder()
+                .subject(userDetails.getUsername()) // username
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expirationMs))
-                .signWith(getSigningKey())
-                .compact();
+                .signWith(getSigningKey());
+                
+        if (userDetails instanceof com.pfe.facturation.security.entity.User) {
+            com.pfe.facturation.security.entity.User user = (com.pfe.facturation.security.entity.User) userDetails;
+            builder.claim("permissions", user.getAllPermissions());
+        }
+        
+        return builder.compact();
     }
 
     /**
-     * Extrait l'email (subject) du token JWT.
+     * Extrait le username (subject) du token JWT.
      */
-    public String extractEmail(String token) {
+    public String extractUsername(String token) {
         return extractAllClaims(token).getSubject();
     }
 
@@ -70,8 +76,8 @@ public class JwtUtil {
      */
     public boolean isTokenValid(String token, UserDetails userDetails) {
         try {
-            final String email = extractEmail(token);
-            return email.equals(userDetails.getUsername()) && !isTokenExpired(token);
+            final String username = extractUsername(token);
+            return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
         } catch (Exception e) {
             log.warn("Token validation failed: {}", e.getMessage());
             return false;

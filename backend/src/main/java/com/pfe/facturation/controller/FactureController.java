@@ -17,6 +17,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -41,6 +42,7 @@ public class FactureController {
     }
 
     @GetMapping
+    @PreAuthorize("hasPermission('FACTURE', 'READ')")
     @Operation(summary = "Lister toutes les factures")
     public ResponseEntity<?> findAll(
             @RequestParam(name = "statut", required = false) String statut) {
@@ -51,24 +53,28 @@ public class FactureController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasPermission('FACTURE', 'READ')")
     @Operation(summary = "Récupérer une facture par son ID")
     public ResponseEntity<FactureResponseDTO> findById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(factureService.findById(id));
     }
 
     @GetMapping("/client/{clientId}")
+    @PreAuthorize("hasPermission('FACTURE', 'READ')")
     @Operation(summary = "Lister les factures d'un client")
     public ResponseEntity<List<FactureResponseDTO>> findByClient(@PathVariable("clientId") Long clientId) {
         return ResponseEntity.ok(factureService.findByClient(clientId));
     }
 
     @GetMapping("/stats")
+    @PreAuthorize("hasPermission('FACTURE', 'READ')")
     @Operation(summary = "Statistiques pour le tableau de bord")
     public ResponseEntity<Map<String, Object>> getDashboardStats() {
         return ResponseEntity.ok(factureService.getDashboardStats());
     }
 
     @PostMapping
+    @PreAuthorize("hasPermission('FACTURE', 'CREATE')")
     @Operation(summary = "Créer une nouvelle facture")
     public ResponseEntity<FactureResponseDTO> create(
             @Valid @RequestBody CreateFactureRequest request,
@@ -78,6 +84,7 @@ public class FactureController {
     }
 
     @PatchMapping("/{id}/statut")
+    @PreAuthorize("hasPermission('FACTURE', 'UPDATE')")
     @Operation(summary = "Changer le statut d'une facture (ex: ENVOYEE, PAYEE, ANNULEE)")
     public ResponseEntity<FactureResponseDTO> updateStatut(
             @PathVariable("id") Long id,
@@ -86,6 +93,7 @@ public class FactureController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasPermission('FACTURE', 'DELETE')")
     @Operation(summary = "Supprimer une facture (impossible si PAYEE)")
     public ResponseEntity<Void> delete(@PathVariable("id") Long id) {
         factureService.delete(id);
@@ -93,6 +101,7 @@ public class FactureController {
     }
 
     @GetMapping("/{id}/pdf")
+    @PreAuthorize("hasPermission('FACTURE', 'READ')")
     @Operation(summary = "Générer la facture en PDF")
     public ResponseEntity<byte[]> generatePdf(@PathVariable("id") Long id) {
         try {
@@ -110,6 +119,7 @@ public class FactureController {
     }
 
     @GetMapping(value = "/{id}/export-xml", produces = MediaType.APPLICATION_XML_VALUE)
+    @PreAuthorize("hasPermission('FACTURE', 'READ')")
     @Operation(summary = "Exporter la facture au format XML structuré")
     public ResponseEntity<String> exportXml(@PathVariable("id") Long id) {
         String xmlContent = xmlExportService.exportFacture(id);
@@ -122,12 +132,14 @@ public class FactureController {
 
     /** Alias pour compatibilité avec l'ancien endpoint /xml */
     @GetMapping(value = "/{id}/xml", produces = MediaType.APPLICATION_XML_VALUE)
+    @PreAuthorize("hasPermission('FACTURE', 'READ')")
     @Operation(summary = "Alias export XML (compatibilité)")
     public ResponseEntity<String> exportXmlAlias(@PathVariable("id") Long id) {
         return exportXml(id);
     }
 
     @PostMapping("/{id}/send-email")
+    @PreAuthorize("hasPermission('FACTURE', 'READ')")
     @Operation(summary = "Envoyer la facture par email au client")
     public ResponseEntity<Map<String, String>> sendEmail(@PathVariable("id") Long id) {
         try {

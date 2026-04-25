@@ -60,14 +60,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String jwt = authHeader.substring(7);
 
         try {
-            // 4. Extraire l'email du token
-            final String userEmail = jwtUtil.extractEmail(jwt);
+            // 4. Extraire le username du token
+            final String username = jwtUtil.extractUsername(jwt);
 
-            // 5. Si email extrait et pas encore authentifié dans ce contexte
-            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            // 5. Si username extrait et pas encore authentifié dans ce contexte
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
                 // 6. Charger l'utilisateur depuis la base de données
-                UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
                 // 7. Valider le token
                 if (jwtUtil.isTokenValid(jwt, userDetails)) {
@@ -82,7 +82,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     // 9. Enregistrer l'authentification dans le contexte de la requête
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    log.debug("User {} authenticated successfully", userEmail);
+                    log.debug("User {} authenticated successfully", username);
                 }
             }
         } catch (Exception e) {

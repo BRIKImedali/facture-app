@@ -75,6 +75,7 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
                 // Routes publiques
+                .requestMatchers("/api/auth/register").denyAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 // Swagger UI
                 .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()

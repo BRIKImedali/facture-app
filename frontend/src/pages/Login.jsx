@@ -14,7 +14,7 @@ const Login = () => {
   const onSubmit = async (data) => {
     setError('');
     try {
-      await login(data.email, data.password);
+      await login(data.username, data.password);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Identifiants incorrects ou erreur serveur.');
@@ -31,14 +31,14 @@ const Login = () => {
 
         <form onSubmit={handleSubmit(onSubmit)} className="auth-form">
           <div className="form-group">
-            <label>Email</label>
+            <label>Identifiant (Username)</label>
             <input
-              type="email"
-              {...register('email', { required: "L'email est requis" })}
-              className={errors.email ? 'is-invalid' : ''}
-              placeholder="votre@email.com"
+              type="text"
+              {...register('username', { required: "L'identifiant est requis" })}
+              className={errors.username ? 'is-invalid' : ''}
+              placeholder="votre identifiant"
             />
-            {errors.email && <span className="error-text">{errors.email.message}</span>}
+            {errors.username && <span className="error-text">{errors.username.message}</span>}
           </div>
 
           <div className="form-group">
@@ -80,9 +80,7 @@ const Login = () => {
           </button>
         </form>
 
-        <div className="auth-footer">
-          <p>Pas encore de compte ? <Link to="/register">S&apos;inscrire</Link></p>
-        </div>
+
       </div>
     </div>
   );

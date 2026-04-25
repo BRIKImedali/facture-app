@@ -8,7 +8,7 @@ export const factureService = {
   getStats: () => api.get('/factures/stats'),
   create: (data) => api.post('/factures', data),
   // Changer le statut : statut = 'ENVOYEE' | 'PAYEE' | 'ANNULEE'
-  updateStatut: (id, statut) => api.patch(`/factures/${id}/statut`, { statut }),
+  updateStatut: (id, payload) => api.patch(`/factures/${id}/statut`, payload),
   delete: (id) => api.delete(`/factures/${id}`),
   downloadPdf: (id) => api.get(`/factures/${id}/pdf`, { responseType: 'blob' }),
   // Export XML structuré (endpoint principal)

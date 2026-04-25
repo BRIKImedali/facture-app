@@ -8,5 +8,6 @@ import jakarta.validation.constraints.NotNull;
  * Ex: {"statut": "PAYEE"}
  */
 public record UpdateStatutRequest(
-        @NotNull(message = "Le statut est obligatoire") StatutFacture statut
+        @NotNull(message = "Le statut est obligatoire") StatutFacture statut,
+        String paymentMethod
 ) {}

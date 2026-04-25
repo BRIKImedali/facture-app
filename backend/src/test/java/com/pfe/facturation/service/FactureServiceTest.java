@@ -52,7 +52,7 @@ class FactureServiceTest {
 
         userTest = new User();
         userTest.setId(1L);
-        userTest.setEmail("admin@test.com");
+        userTest.setUsername("admin");
 
         factureTest = Facture.builder()
                 .id(10L)
@@ -75,7 +75,7 @@ class FactureServiceTest {
         when(factureRepository.save(any())).thenReturn(factureTest);
         when(clientService.toDTO(any())).thenReturn(null);
 
-        factureService.updateStatut(10L, new UpdateStatutRequest(StatutFacture.ENVOYEE));
+        factureService.updateStatut(10L, new UpdateStatutRequest(StatutFacture.ENVOYEE, null));
 
         verify(factureRepository, times(1)).save(argThat(f -> f.getStatut() == StatutFacture.ENVOYEE));
     }
@@ -85,7 +85,7 @@ class FactureServiceTest {
     void updateStatut_brouillonToPayee_throwsException() {
         when(factureRepository.findById(10L)).thenReturn(Optional.of(factureTest));
 
-        assertThatThrownBy(() -> factureService.updateStatut(10L, new UpdateStatutRequest(StatutFacture.PAYEE)))
+        assertThatThrownBy(() -> factureService.updateStatut(10L, new UpdateStatutRequest(StatutFacture.PAYEE, null)))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Transition invalide");
     }
@@ -96,7 +96,7 @@ class FactureServiceTest {
         factureTest.setStatut(StatutFacture.PAYEE);
         when(factureRepository.findById(10L)).thenReturn(Optional.of(factureTest));
 
-        assertThatThrownBy(() -> factureService.updateStatut(10L, new UpdateStatutRequest(StatutFacture.ANNULEE)))
+        assertThatThrownBy(() -> factureService.updateStatut(10L, new UpdateStatutRequest(StatutFacture.ANNULEE, null)))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -106,7 +106,7 @@ class FactureServiceTest {
         factureTest.setStatut(StatutFacture.ANNULEE);
         when(factureRepository.findById(10L)).thenReturn(Optional.of(factureTest));
 
-        assertThatThrownBy(() -> factureService.updateStatut(10L, new UpdateStatutRequest(StatutFacture.ENVOYEE)))
+        assertThatThrownBy(() -> factureService.updateStatut(10L, new UpdateStatutRequest(StatutFacture.ENVOYEE, null)))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -155,7 +155,7 @@ class FactureServiceTest {
         when(clientRepository.findById(99L)).thenReturn(Optional.empty());
 
         CreateFactureRequest request = new CreateFactureRequest(
-                99L, LocalDate.now().plusDays(30), "Test",
+                99L, LocalDate.now().plusDays(30), "Test", null,
                 List.of(new CreateFactureRequest.LigneRequest(null, "Service A", 1, new BigDecimal("500.00"), 19.0))
         );
 
@@ -172,7 +172,7 @@ class FactureServiceTest {
         when(clientService.toDTO(any())).thenReturn(null);
 
         CreateFactureRequest request = new CreateFactureRequest(
-                1L, null, null,
+                1L, null, null, null,
                 List.of(
                         // 2 unités × 100 TND HT @ 19% TVA = 200 HT + 38 TVA = 238 TTC
                         new CreateFactureRequest.LigneRequest(null, "Conseil", 2, new BigDecimal("100.00"), 19.0)

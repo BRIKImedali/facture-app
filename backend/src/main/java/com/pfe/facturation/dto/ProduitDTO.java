@@ -17,6 +17,9 @@ public record ProduitDTO(
         @NotNull(message = "Le prix HT est obligatoire")
         @DecimalMin(value = "0.0", message = "Le prix doit être positif") BigDecimal prixHT,
         Double tauxTva,
-        String unite,
-        Boolean actif
+        Long uniteId,
+        String unite, // on garde le nom pour l'affichage
+        Boolean actif,
+        Integer stockQuantite,
+        Integer stockMinimum
 ) {}
