@@ -115,8 +115,8 @@ const UserManagement = () => {
   };
 
   const handleCreateUser = async () => {
-    if (!newUser.username || !newUser.password || newUser.password.length < 8) {
-      toast.error('Veuillez remplir tous les champs obligatoires (Mot de passe min. 8 caractères)');
+    if (!newUser.username || !newUser.password || newUser.password.length < 8 || newUser.roleIds.length === 0) {
+      toast.error('Veuillez remplir tous les champs obligatoires et sélectionner au moins un rôle');
       return;
     }
     try {
@@ -432,7 +432,7 @@ const UserManagement = () => {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Rôles (Optionnel)</label>
+                <label className="form-label">Rôles <span className="required">*</span></label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 150, overflowY: 'auto', padding: 8, border: '1px solid var(--admin-border)', borderRadius: 6 }}>
                   {roles.map(role => (
                     <label key={role.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>

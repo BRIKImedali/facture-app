@@ -1,8 +1,19 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useMemo } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import ChatAssistant from './ChatAssistant';
 import './Layout.css';
+
+// ─── Menu item definitions ───────────────────────────────────────────────────
+// permission: null  → always visible to everyone
+// permission: 'X'   → visible only when user.permissions includes 'X'
+//                     (SUPER_ADMIN bypasses all permission checks)
+const ALL_NAV_ITEMS = [
+  { key: 'dashboard', to: '/dashboard',  icon: '📊', label: 'Tableau de bord', permission: null,        end: true  },
+  { key: 'clients',   to: '/clients',    icon: '👥', label: 'Clients',          permission: 'CLIENTS',   end: false },
+  { key: 'produits',  to: '/produits',   icon: '📦', label: 'Produits',         permission: 'PRODUITS',  end: false },
+  { key: 'factures',  to: '/factures',   icon: '🧾', label: 'Factures',         permission: 'FACTURES',  end: false },
+];
 
 const Layout = () => {
   const { user, logout } = useContext(AuthContext);
@@ -15,6 +26,33 @@ const Layout = () => {
   };
 
   const closeSidebar = () => setSidebarOpen(false);
+
+  // ─── RBAC filtering ────────────────────────────────────────────────────────
+  const visibleNavItems = useMemo(() => {
+    if (!user) return [];
+    const isSuperAdmin = user.role === 'SUPER_ADMIN';
+    const userPerms = Array.isArray(user.permissions) ? user.permissions : [];
+
+    return ALL_NAV_ITEMS.filter(item => {
+      if (item.permission === null) return true;          // always show
+      if (isSuperAdmin) return true;                      // SUPER_ADMIN sees all
+      return userPerms.includes(item.permission);         // match permission
+    });
+  }, [user]);
+
+  // ─── Role label helper ─────────────────────────────────────────────────────
+  const roleLabel = () => {
+    switch (user?.role) {
+      case 'SUPER_ADMIN':  return '👑 Super Admin';
+      case 'ADMIN':        return '🔑 Administrateur';
+      default:             return '👤 Utilisateur';
+    }
+  };
+
+  // User initials for avatar
+  const initials = user?.username
+    ? user.username.slice(0, 2).toUpperCase()
+    : `${user?.nom?.[0] ?? ''}${user?.prenom?.[0] ?? ''}`;
 
   return (
     <div className="layout">
@@ -29,26 +67,30 @@ const Layout = () => {
         </div>
 
         <nav className="sidebar-nav">
-          <NavLink to="/dashboard" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} end onClick={closeSidebar}>
-            <span className="nav-icon">📊</span>
-            <span>Tableau de bord</span>
-          </NavLink>
-          <NavLink to="/clients" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
-            <span className="nav-icon">👥</span>
-            <span>Clients</span>
-          </NavLink>
-          <NavLink to="/produits" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
-            <span className="nav-icon">📦</span>
-            <span>Produits</span>
-          </NavLink>
-          <NavLink to="/factures" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
-            <span className="nav-icon">🧾</span>
-            <span>Factures</span>
-          </NavLink>
-          {user?.role === 'ADMIN' && (
-            <NavLink to="/admin" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={closeSidebar} style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
+          {/* ── Filtered menu items ── */}
+          {visibleNavItems.map(item => (
+            <NavLink
+              key={item.key}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              onClick={closeSidebar}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+
+          {/* ── Admin panel (ADMIN / SUPER_ADMIN only) ── */}
+          {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+            <NavLink
+              to="/admin"
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              onClick={closeSidebar}
+              style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}
+            >
               <span className="nav-icon">⚙️</span>
-              <span style={{color: '#667eea', fontWeight: 'bold'}}>Administration</span>
+              <span style={{ color: '#667eea', fontWeight: 'bold' }}>Administration</span>
             </NavLink>
           )}
         </nav>
@@ -56,10 +98,10 @@ const Layout = () => {
         {/* Infos utilisateur + déconnexion */}
         <div className="sidebar-footer">
           <div className="user-info">
-            <div className="user-avatar">{user?.nom?.[0]}{user?.prenom?.[0]}</div>
+            <div className="user-avatar">{initials}</div>
             <div>
-              <p className="user-name">{user?.nom} {user?.prenom}</p>
-              <p className="user-role">{user?.role === 'ADMIN' ? '🔑 Administrateur' : '👤 Utilisateur'}</p>
+              <p className="user-name">{user?.nom ?? user?.username}</p>
+              <p className="user-role">{roleLabel()}</p>
             </div>
           </div>
           <button className="btn-logout" onClick={handleLogout}>
@@ -86,7 +128,6 @@ const Layout = () => {
       <ChatAssistant />
     </div>
   );
-};
 
 export default Layout;
 

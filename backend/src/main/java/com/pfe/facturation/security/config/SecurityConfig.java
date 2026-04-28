@@ -1,4 +1,4 @@
-// SecurityConfig.java — Configuration Spring Security mise à jour avec CustomPermissionEvaluator
+// SecurityConfig.java — Configuration Spring Security
 package com.pfe.facturation.security.config;
 
 import com.pfe.facturation.security.CustomPermissionEvaluator;
@@ -29,14 +29,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * Configuration Spring Security mise à jour.
- *
- * Changements par rapport à la version précédente :
- * - Ajout du CustomPermissionEvaluator pour supporter @PreAuthorize("hasPermission(...)")
- * - Protection des endpoints /api/admin/** avec hasRole('ADMIN')
- * - Le MethodSecurityExpressionHandler est configuré avec notre évaluateur personnalisé
- */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
@@ -54,10 +46,6 @@ public class SecurityConfig {
         this.customPermissionEvaluator = customPermissionEvaluator;
     }
 
-    /**
-     * Configure le MethodSecurityExpressionHandler avec notre CustomPermissionEvaluator.
-     * C'est ce bean qui permet l'utilisation de hasPermission() dans @PreAuthorize.
-     */
     @Bean
     public MethodSecurityExpressionHandler methodSecurityExpressionHandler() {
         DefaultMethodSecurityExpressionHandler handler = new DefaultMethodSecurityExpressionHandler();
@@ -65,25 +53,23 @@ public class SecurityConfig {
         return handler;
     }
 
-    /**
-     * Définit les règles de sécurité HTTP.
-     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
-                // Routes publiques
+                // Seul le login est public — PAS de register !
+                .requestMatchers("/api/auth/login").permitAll()
+                // Register bloqué — l'admin crée les comptes
                 .requestMatchers("/api/auth/register").denyAll()
-                .requestMatchers("/api/auth/**").permitAll()
                 // Swagger UI
                 .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()
-                // Routes admin — doivent être authentifiées (permissions vérifiées par @PreAuthorize)
+                // Routes admin — authentifiées (permissions vérifiées par @PreAuthorize)
                 .requestMatchers("/api/admin/**").authenticated()
                 // Suppression réservée aux ADMIN
                 .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasRole("ADMIN")
-                // Toutes les autres routes
+                // Toutes les autres routes nécessitent une authentification
                 .anyRequest().authenticated()
             )
             .sessionManagement(session ->
