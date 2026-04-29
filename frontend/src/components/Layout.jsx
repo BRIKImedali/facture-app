@@ -30,12 +30,12 @@ const Layout = () => {
   // ─── RBAC filtering ────────────────────────────────────────────────────────
   const visibleNavItems = useMemo(() => {
     if (!user) return [];
-    const isSuperAdmin = user.role === 'SUPER_ADMIN';
+    const isPrivileged = user.role === 'SUPER_ADMIN' || user.role === 'ADMIN';
     const userPerms = Array.isArray(user.permissions) ? user.permissions : [];
 
     return ALL_NAV_ITEMS.filter(item => {
       if (item.permission === null) return true;          // always show
-      if (isSuperAdmin) return true;                      // SUPER_ADMIN sees all
+      if (isPrivileged) return true;                      // ADMIN & SUPER_ADMIN see all
       return userPerms.includes(item.permission);         // match permission
     });
   }, [user]);
@@ -128,6 +128,7 @@ const Layout = () => {
       <ChatAssistant />
     </div>
   );
+};
 
 export default Layout;
 
