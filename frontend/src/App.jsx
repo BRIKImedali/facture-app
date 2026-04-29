@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
+import PermissionGuard from './components/PermissionGuard';
 import Layout from './components/Layout';
 
 // Initialiser i18n avant le reste de l'application
@@ -10,7 +11,6 @@ import './i18n/index.js';
 
 // Pages publiques
 import Login from './pages/Login';
-import Register from './pages/Register';
 
 // Pages privées existantes
 import Dashboard from './pages/Dashboard';
@@ -30,6 +30,8 @@ import RoleManagement from './components/admin/roles/RoleManagement';
 import DatabaseConfig from './components/admin/database/DatabaseConfig';
 import ErpConfig from './components/admin/erp/ErpConfig';
 import AuditLog from './components/admin/audit/AuditLog';
+import UnitesPage from './pages/admin/UnitesPage';
+import CategoriesClientsPage from './pages/admin/CategoriesClientsPage';
 
 function App() {
   return (
@@ -46,7 +48,6 @@ function App() {
         <Routes>
           {/* Routes publiques */}
           <Route path="/login"    element={<Login />} />
-          <Route path="/register" element={<Register />} />
 
           {/* Redirection racine → dashboard */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -54,15 +55,18 @@ function App() {
           {/* Routes privées — Layout principal de l'application */}
           <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
             <Route path="/dashboard"                      element={<Dashboard />} />
-            <Route path="/clients"                        element={<ClientList />} />
-            <Route path="/clients/nouveau"                element={<ClientForm />} />
-            <Route path="/clients/:id/modifier"           element={<ClientForm />} />
-            <Route path="/produits"                       element={<ProduitList />} />
-            <Route path="/produits/nouveau"               element={<ProduitForm />} />
-            <Route path="/produits/:id/modifier"          element={<ProduitForm />} />
-            <Route path="/factures"                       element={<FactureList />} />
-            <Route path="/factures/nouvelle"              element={<FactureCreate />} />
-            <Route path="/factures/:id"                   element={<FactureDetail />} />
+            
+            <Route path="/clients"                        element={<PermissionGuard permissions="CLIENT:READ" redirect><ClientList /></PermissionGuard>} />
+            <Route path="/clients/nouveau"                element={<PermissionGuard permissions="CLIENT:CREATE" redirect><ClientForm /></PermissionGuard>} />
+            <Route path="/clients/:id/modifier"           element={<PermissionGuard permissions="CLIENT:UPDATE" redirect><ClientForm /></PermissionGuard>} />
+            
+            <Route path="/produits"                       element={<PermissionGuard permissions="PRODUIT:READ" redirect><ProduitList /></PermissionGuard>} />
+            <Route path="/produits/nouveau"               element={<PermissionGuard permissions="PRODUIT:CREATE" redirect><ProduitForm /></PermissionGuard>} />
+            <Route path="/produits/:id/modifier"          element={<PermissionGuard permissions="PRODUIT:UPDATE" redirect><ProduitForm /></PermissionGuard>} />
+            
+            <Route path="/factures"                       element={<PermissionGuard permissions="FACTURE:READ" redirect><FactureList /></PermissionGuard>} />
+            <Route path="/factures/nouvelle"              element={<PermissionGuard permissions="FACTURE:CREATE" redirect><FactureCreate /></PermissionGuard>} />
+            <Route path="/factures/:id"                   element={<PermissionGuard permissions="FACTURE:READ" redirect><FactureDetail /></PermissionGuard>} />
           </Route>
 
           {/* ====================================================
@@ -75,7 +79,9 @@ function App() {
             path="/admin"
             element={
               <PrivateRoute>
-                <AdminLayout />
+                <PermissionGuard permissions="SYSTEM:CONFIG" redirect>
+                  <AdminLayout />
+                </PermissionGuard>
               </PrivateRoute>
             }
           >
@@ -90,6 +96,10 @@ function App() {
 
             {/* Configuration base de données */}
             <Route path="database" element={<DatabaseConfig />} />
+
+            {/* Unités & Catégories */}
+            <Route path="unites" element={<PermissionGuard permissions="UNITE:READ"><UnitesPage /></PermissionGuard>} />
+            <Route path="categories-clients" element={<PermissionGuard permissions="CATEGORIE:READ"><CategoriesClientsPage /></PermissionGuard>} />
 
             {/* Intégration ERP */}
             <Route path="erp"      element={<ErpConfig />} />

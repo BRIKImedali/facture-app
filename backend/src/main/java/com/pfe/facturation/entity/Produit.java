@@ -8,6 +8,11 @@ import java.math.BigDecimal;
 
 /**
  * Entité Produit — représente un produit ou service facturable.
+ *
+ * Changements v2:
+ * - unite: String → ManyToOne Unite (entité dédiée)
+ * - ajout stockQuantite (quantité en stock actuelle)
+ * - ajout stockMinimum (seuil d'alerte de stock bas)
  * Mappée sur la table "produits".
  */
 @Entity
@@ -44,9 +49,30 @@ public class Produit {
     @Builder.Default
     private Double tauxTva = 20.0;
 
-    /** Unité de mesure : "unité", "heure", "jour", "kg", "mois"... */
+    /**
+     * Unité de mesure — entité dédiée pour permettre la gestion centralisée.
+     * ManyToOne optionnel (nullable) pour compatibilité ascendante.
+     */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "unite_id")
+    private Unite unite;
+
+    /**
+     * Quantité actuellement disponible en stock.
+     * Décrémentée lors de la validation d'une facture (statut VALIDEE).
+     * null = gestion de stock non activée pour ce produit.
+     */
     @Builder.Default
-    private String unite = "unité";
+    @Column(name = "stock_quantite")
+    private Integer stockQuantite = 0;
+
+    /**
+     * Seuil minimal de stock — en dessous de cette valeur, une alerte est déclenchée.
+     * 0 = pas d'alerte.
+     */
+    @Builder.Default
+    @Column(name = "stock_minimum")
+    private Integer stockMinimum = 0;
 
     /** Produit actif = disponible pour la facturation */
     @Builder.Default

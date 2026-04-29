@@ -11,6 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import com.pfe.facturation.repository.CategorieClientRepository;
+import com.pfe.facturation.entity.CategorieClient;
+
 @Service
 @Transactional
 public class ClientService {
@@ -18,9 +21,11 @@ public class ClientService {
     private static final Logger log = LoggerFactory.getLogger(ClientService.class);
 
     private final ClientRepository clientRepository;
+    private final CategorieClientRepository categoryRepository;
 
-    public ClientService(ClientRepository clientRepository) {
+    public ClientService(ClientRepository clientRepository, CategorieClientRepository categoryRepository) {
         this.clientRepository = clientRepository;
+        this.categoryRepository = categoryRepository;
     }
 
     // ===== Lecture =====
@@ -77,6 +82,13 @@ public class ClientService {
         existing.setPays(dto.pays() != null ? dto.pays() : "Maroc");
         existing.setIce(dto.ice());
 
+        if (dto.categorieIds() != null && !dto.categorieIds().isEmpty()) {
+            java.util.List<CategorieClient> categories = categoryRepository.findAllById(dto.categorieIds());
+            existing.setCategories(categories);
+        } else {
+            existing.setCategories(null);
+        }
+
         Client saved = clientRepository.save(existing);
         log.info("Client mis à jour : id={}", id);
         return toDTO(saved);
@@ -102,12 +114,13 @@ public class ClientService {
                 c.getVille(),
                 c.getCodePostal(),
                 c.getPays(),
-                c.getIce()
+                c.getIce(),
+                c.getCategories() != null ? c.getCategories().stream().map(CategorieClient::getId).toList() : null
         );
     }
 
     private Client toEntity(ClientDTO dto) {
-        return Client.builder()
+        Client client = Client.builder()
                 .nom(dto.nom())
                 .email(dto.email())
                 .telephone(dto.telephone())
@@ -117,6 +130,13 @@ public class ClientService {
                 .pays(dto.pays() != null ? dto.pays() : "Maroc")
                 .ice(dto.ice())
                 .build();
+
+        if (dto.categorieIds() != null && !dto.categorieIds().isEmpty()) {
+            java.util.List<CategorieClient> categories = categoryRepository.findAllById(dto.categorieIds());
+            client.setCategories(categories);
+        }
+
+        return client;
     }
 
     /** Récupère un Client ou lève une 404 */

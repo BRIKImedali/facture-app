@@ -11,6 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import com.pfe.facturation.entity.Unite;
+import com.pfe.facturation.repository.UniteRepository;
+
 @Service
 @Transactional
 public class ProduitService {
@@ -18,9 +21,11 @@ public class ProduitService {
     private static final Logger log = LoggerFactory.getLogger(ProduitService.class);
 
     private final ProduitRepository produitRepository;
+    private final UniteRepository uniteRepository;
 
-    public ProduitService(ProduitRepository produitRepository) {
+    public ProduitService(ProduitRepository produitRepository, UniteRepository uniteRepository) {
         this.produitRepository = produitRepository;
+        this.uniteRepository = uniteRepository;
     }
 
     // ===== Lecture =====
@@ -54,14 +59,22 @@ public class ProduitService {
     // ===== Écriture =====
 
     public ProduitDTO create(ProduitDTO dto) {
+        Unite uniteObj = null;
+        if (dto.uniteId() != null) {
+            uniteObj = uniteRepository.findById(dto.uniteId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Unité non trouvée : " + dto.uniteId()));
+        }
+
         Produit produit = Produit.builder()
                 .reference(dto.reference())
                 .nom(dto.nom())
                 .description(dto.description())
                 .prixHT(dto.prixHT())
                 .tauxTva(dto.tauxTva() != null ? dto.tauxTva() : 20.0)
-                .unite(dto.unite() != null ? dto.unite() : "unité")
+                .unite(uniteObj)
                 .actif(dto.actif() != null ? dto.actif() : true)
+                .stockQuantite(dto.stockQuantite() != null ? dto.stockQuantite() : 0)
+                .stockMinimum(dto.stockMinimum() != null ? dto.stockMinimum() : 0)
                 .build();
 
         Produit saved = produitRepository.save(produit);
@@ -77,8 +90,16 @@ public class ProduitService {
         existing.setDescription(dto.description());
         existing.setPrixHT(dto.prixHT());
         if (dto.tauxTva() != null) existing.setTauxTva(dto.tauxTva());
-        if (dto.unite() != null)   existing.setUnite(dto.unite());
+        if (dto.uniteId() != null) {
+            Unite uniteObj = uniteRepository.findById(dto.uniteId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Unité non trouvée : " + dto.uniteId()));
+            existing.setUnite(uniteObj);
+        } else {
+            existing.setUnite(null);
+        }
         if (dto.actif() != null)   existing.setActif(dto.actif());
+        if (dto.stockQuantite() != null) existing.setStockQuantite(dto.stockQuantite());
+        if (dto.stockMinimum() != null)  existing.setStockMinimum(dto.stockMinimum());
 
         Produit saved = produitRepository.save(existing);
         log.info("Produit mis à jour : id={}", id);
@@ -110,8 +131,11 @@ public class ProduitService {
                 p.getDescription(),
                 p.getPrixHT(),
                 p.getTauxTva(),
-                p.getUnite(),
-                p.getActif()
+                p.getUnite() != null ? p.getUnite().getId() : null,
+                p.getUnite() != null ? p.getUnite().getNom() : null,
+                p.getActif(),
+                p.getStockQuantite(),
+                p.getStockMinimum()
         );
     }
 

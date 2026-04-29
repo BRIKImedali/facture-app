@@ -42,7 +42,7 @@ public class ErpConfigController {
     /** GET /api/admin/erp/configs/{id} — Détail d'une configuration */
     @GetMapping("/configs/{id}")
     @PreAuthorize("hasPermission('SYSTEM', 'CONFIG')")
-    public ResponseEntity<ErpConfig> getConfigById(@PathVariable Long id) {
+    public ResponseEntity<ErpConfig> getConfigById(@PathVariable(name = "id") Long id) {
         ErpConfig config = erpIntegrationService.getConfigById(id);
         config.setApiKeyEncrypted("****");
         config.setPasswordEncrypted("****");
@@ -67,7 +67,7 @@ public class ErpConfigController {
     @PutMapping("/configs/{id}")
     @PreAuthorize("hasPermission('SYSTEM', 'CONFIG')")
     public ResponseEntity<Map<String, Object>> updateConfig(
-            @PathVariable Long id, @RequestBody ErpConfig config) {
+            @PathVariable(name = "id") Long id, @RequestBody ErpConfig config) {
         try {
             ErpConfig updated = erpIntegrationService.updateConfig(id, config);
             updated.setApiKeyEncrypted("****");
@@ -81,7 +81,7 @@ public class ErpConfigController {
     /** DELETE /api/admin/erp/configs/{id} — Supprime une configuration ERP */
     @DeleteMapping("/configs/{id}")
     @PreAuthorize("hasPermission('SYSTEM', 'CONFIG')")
-    public ResponseEntity<Map<String, Object>> deleteConfig(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> deleteConfig(@PathVariable(name = "id") Long id) {
         try {
             erpIntegrationService.deleteConfig(id);
             return ResponseEntity.ok(Map.of("success", true, "message", "Configuration supprimée"));
@@ -93,7 +93,7 @@ public class ErpConfigController {
     /** POST /api/admin/erp/configs/{id}/test — Teste la connexion à l'ERP */
     @PostMapping("/configs/{id}/test")
     @PreAuthorize("hasPermission('SYSTEM', 'CONFIG')")
-    public ResponseEntity<Map<String, Object>> testConnection(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> testConnection(@PathVariable(name = "id") Long id) {
         return ResponseEntity.ok(erpIntegrationService.testConnection(id));
     }
 
@@ -125,11 +125,11 @@ public class ErpConfigController {
     @GetMapping("/sync/history")
     @PreAuthorize("hasPermission('SYSTEM', 'CONFIG')")
     public ResponseEntity<Map<String, Object>> getSyncHistory(
-            @RequestParam(required = false) Long configId,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String entityType,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(name = "configId", required = false) Long configId,
+            @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "entityType", required = false) String entityType,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
 
         Page<ErpSyncHistory> historyPage = erpIntegrationService.getSyncHistory(
             configId, status, entityType, page, size

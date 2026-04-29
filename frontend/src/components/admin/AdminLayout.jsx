@@ -9,6 +9,8 @@ const NAV_ITEMS = [
   { path: '/admin',          label: 'nav.dashboard', icon: '📊', exact: true },
   { path: '/admin/users',    label: 'nav.users',     icon: '👥' },
   { path: '/admin/roles',    label: 'nav.roles',     icon: '🔐' },
+  { path: '/admin/unites',   label: 'Unités',        icon: '📏' },
+  { path: '/admin/categories-clients', label: 'Catégories', icon: '🏷️' },
   { path: '/admin/database', label: 'nav.database',  icon: '🗄️' },
   { path: '/admin/erp',      label: 'nav.erp',       icon: '🔗' },
   { path: '/admin/audit',    label: 'nav.audit',     icon: '📋' },
@@ -69,20 +71,27 @@ const AdminLayout = () => {
         {/* Navigation */}
         <nav className="sidebar-nav">
           {!collapsed && <div className="sidebar-section-title">Menu</div>}
-          {NAV_ITEMS.map(item => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              end={item.exact}
-              className={({ isActive }) =>
-                `sidebar-nav-item ${isActive ? 'active' : ''}`
-              }
-              title={collapsed ? t(item.label) : ''}
-            >
-              <span className="sidebar-nav-icon">{item.icon}</span>
-              {!collapsed && <span className="sidebar-nav-label">{t(item.label)}</span>}
-            </NavLink>
-          ))}
+          {NAV_ITEMS.map(item => {
+            // Filtrer l'affichage selon les permissions pour les nouveaux menus
+            const userPerms = user.permissions || [];
+            if (item.path === '/admin/unites' && !userPerms.includes('UNITE:READ') && user.role !== 'ADMIN') return null;
+            if (item.path === '/admin/categories-clients' && !userPerms.includes('CATEGORIE:READ') && user.role !== 'ADMIN') return null;
+
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                end={item.exact}
+                className={({ isActive }) =>
+                  `sidebar-nav-item ${isActive ? 'active' : ''}`
+                }
+                title={collapsed ? (item.label.startsWith('nav.') ? t(item.label) : item.label) : ''}
+              >
+                <span className="sidebar-nav-icon">{item.icon}</span>
+                {!collapsed && <span className="sidebar-nav-label">{item.label.startsWith('nav.') ? t(item.label) : item.label}</span>}
+              </NavLink>
+            );
+          })}
 
           {/* Séparateur */}
           <div style={{ height: 1, background: 'var(--admin-border)', margin: '12px 16px' }} />
@@ -124,7 +133,7 @@ const AdminLayout = () => {
 
           <div>
             <div className="header-title">
-              {activeNav ? t(activeNav.label) : t('nav.admin')}
+              {activeNav ? (activeNav.label.startsWith('nav.') ? t(activeNav.label) : activeNav.label) : t('nav.admin')}
             </div>
           </div>
         </div>

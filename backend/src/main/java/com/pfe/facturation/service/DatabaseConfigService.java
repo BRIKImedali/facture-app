@@ -34,6 +34,7 @@ public class DatabaseConfigService {
 
     private final DatabaseProfileRepository profileRepository;
     private final EncryptionUtil encryptionUtil;
+    private final DatabaseProvisioningService provisioningService;
 
     /** Récupère tous les profils de connexion */
     public List<DatabaseProfile> getAllProfiles() {
@@ -81,7 +82,18 @@ public class DatabaseConfigService {
         }
 
         log.info("Création du profil BDD '{}' par {}", profile.getProfileName(), createdByEmail);
-        return profileRepository.save(profile);
+        DatabaseProfile saved = profileRepository.save(profile);
+
+        // Provisionner automatiquement la nouvelle base de données et créer toutes les tables
+        try {
+            String result = provisioningService.provisionDatabase(saved);
+            log.info("Provisionnement : {}", result);
+        } catch (Exception e) {
+            log.warn("Provisionnement impossible pour '{}' : {} — la BDD devra être créée manuellement.",
+                    profile.getProfileName(), e.getMessage());
+        }
+
+        return saved;
     }
 
     /**
@@ -158,7 +170,20 @@ public class DatabaseConfigService {
         profile.setIsActive(true);
 
         log.info("Activation du profil BDD '{}'", profile.getProfileName());
-        return profileRepository.save(profile);
+        DatabaseProfile activated = profileRepository.save(profile);
+
+        // Provisionner si la BDD n'existe pas encore
+        try {
+            provisioningService.provisionDatabase(activated);
+        } catch (Exception e) {
+            log.warn("Provisionnement lors de l'activation ignoré : {}", e.getMessage());
+        }
+
+        // Mettre à jour application.properties → app pointera sur cette BDD au prochain démarrage
+        provisioningService.updateApplicationProperties(activated);
+        log.info("application.properties mis à jour. Redémarrez l'application pour appliquer le changement.");
+
+        return activated;
     }
 
     /**

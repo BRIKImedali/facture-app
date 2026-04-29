@@ -28,10 +28,17 @@ const FactureDetail = () => {
   }, [id]);
 
   const handleStatut = async (statut) => {
-    if (!window.confirm(`Changer le statut en "${statut}" ?`)) return;
+    let pm = null;
+    if (statut === 'PAYEE') {
+      const p = window.prompt("Quel est le mode de paiement ? (ESPECES, VIREMENT, CHEQUE)", "VIREMENT");
+      if (!p) return;
+      pm = p.toUpperCase();
+    } else {
+      if (!window.confirm(`Changer le statut en "${statut}" ?`)) return;
+    }
     setUpdatingStatut(true);
     try {
-      const res = await factureService.updateStatut(id, statut);
+      const res = await factureService.updateStatut(id, { statut, paymentMethod: pm });
       setFacture(res.data);
     } catch (err) {
       setError(err.response?.data?.message || 'Erreur.');
@@ -187,6 +194,7 @@ const FactureDetail = () => {
           <h3 style={{ marginTop: 0, marginBottom: '0.75rem', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#94a3b8' }}>Détails</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.875rem', color: '#64748b' }}>
             <div><strong style={{ color: '#374151' }}>Date d'échéance :</strong> {facture.dateEcheance || '—'}</div>
+            <div><strong style={{ color: '#374151' }}>Mode de paiement :</strong> {facture.paymentMethod || '—'}</div>
             <div><strong style={{ color: '#374151' }}>Créée par :</strong> {facture.createdByEmail || '—'}</div>
             {facture.notes && <div style={{ marginTop: '0.5rem', padding: '0.5rem', background: '#f8fafc', borderRadius: 6, color: '#475569' }}>💬 {facture.notes}</div>}
           </div>

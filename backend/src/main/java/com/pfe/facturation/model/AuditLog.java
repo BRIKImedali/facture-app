@@ -34,9 +34,9 @@ public class AuditLog {
     @Column(name = "user_id")
     private Long userId;
 
-    /** Email de l'utilisateur (dénormalisé pour garder trace même si user supprimé) */
-    @Column(name = "user_email", length = 255)
-    private String userEmail;
+    /** Username de l'utilisateur (dénormalisé pour garder trace même si user supprimé) */
+    @Column(name = "username", length = 255)
+    private String username;
 
     /**
      * Type d'action effectuée :

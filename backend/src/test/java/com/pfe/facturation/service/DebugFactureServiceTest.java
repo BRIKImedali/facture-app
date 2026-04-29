@@ -28,7 +28,7 @@ class DebugFactureServiceTest {
 
     @Test
     void testFindByIdExplodes() {
-        User admin = userRepository.findByEmail("admin@test.com").orElseThrow();
+        User admin = userRepository.findByUsername("admin").orElseThrow();
         Client client = new Client();
         client.setNom("Test Client");
         clientRepository.save(client);
@@ -37,6 +37,7 @@ class DebugFactureServiceTest {
                 client.getId(),
                 null,
                 "notes",
+                null,
                 List.of(new CreateFactureRequest.LigneRequest(null, "Test Ligne", 5, new BigDecimal("100"), 20.0))
         );
 

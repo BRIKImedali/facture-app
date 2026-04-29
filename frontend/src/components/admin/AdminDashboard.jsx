@@ -126,7 +126,7 @@ const AdminDashboard = () => {
                 stats.recentLogs.map(log => (
                   <tr key={log.id}>
                     <td>
-                      <span style={{ fontWeight: 600 }}>{log.userEmail || 'SYSTEM'}</span>
+                      <span style={{ fontWeight: 600 }}>{log.username || 'SYSTEM'}</span>
                     </td>
                     <td>
                       <span className={`badge badge-${getActionColor(log.actionType)}`}>

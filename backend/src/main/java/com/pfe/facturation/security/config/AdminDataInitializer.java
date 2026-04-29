@@ -60,10 +60,10 @@ public class AdminDataInitializer {
     }
 
     /**
-     * Assigne le rôle SUPER_ADMIN à l'utilisateur admin@test.com.
+     * Assigne le rôle SUPER_ADMIN à l'utilisateur admin.
      */
     private void assignSuperAdminToAdmin() {
-        Optional<User> adminOpt = userRepository.findByEmail("admin@test.com");
+        Optional<User> adminOpt = userRepository.findByUsername("admin");
         Optional<AppRole> superAdminRole = appRoleRepository.findByName("SUPER_ADMIN");
 
         if (adminOpt.isPresent() && superAdminRole.isPresent()) {
@@ -76,12 +76,12 @@ public class AdminDataInitializer {
 
                 admin.setAppRoles(List.of(superAdmin));
                 userRepository.save(admin);
-                log.info("Rôle SUPER_ADMIN assigné à admin@test.com");
+                log.info("Rôle SUPER_ADMIN assigné à l'utilisateur admin");
             }
         }
 
-        // Assigner VIEWER à l'utilisateur user@test.com
-        Optional<User> userOpt = userRepository.findByEmail("user@test.com");
+        // Assigner VIEWER à l'utilisateur user
+        Optional<User> userOpt = userRepository.findByUsername("user");
         Optional<AppRole> viewerRole = appRoleRepository.findByName("USER");
 
         if (userOpt.isPresent() && viewerRole.isPresent()) {
@@ -89,7 +89,7 @@ public class AdminDataInitializer {
             if (simpleUser.getAppRoles() == null || simpleUser.getAppRoles().isEmpty()) {
                 simpleUser.setAppRoles(List.of(viewerRole.get()));
                 userRepository.save(simpleUser);
-                log.info("Rôle USER assigné à user@test.com");
+                log.info("Rôle USER assigné à l'utilisateur user");
             }
         }
     }

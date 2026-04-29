@@ -68,7 +68,7 @@ public class CustomPermissionEvaluator implements PermissionEvaluator {
         boolean hasPermission = user.hasPermission(permissionString);
 
         log.debug("Vérification permission '{}' pour '{}' : {}",
-            permissionString, user.getEmail(), hasPermission ? "ACCORDÉE" : "REFUSÉE");
+            permissionString, user.getUsername(), hasPermission ? "ACCORDÉE" : "REFUSÉE");
 
         return hasPermission;
     }

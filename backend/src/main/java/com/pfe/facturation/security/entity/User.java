@@ -45,8 +45,8 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String prenom;
 
-    @Column(nullable = false, unique = true)
-    private String email;
+    @Column(nullable = false, unique = true, length = 50)
+    private String username;
 
     @Column(nullable = false)
     private String password;
@@ -149,7 +149,7 @@ public class User implements UserDetails {
 
     @Override
     public String getUsername() {
-        return email;
+        return username;
     }
 
     @Override

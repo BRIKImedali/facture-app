@@ -81,17 +81,44 @@ const DatabaseConfig = () => {
     }
     try {
       setSaving(true);
-      if (editingProfile) {
-        await databaseService.update(editingProfile.id, form);
-        toast.success(t('database.profile.updated', { defaultValue: 'Profil mis à jour' }));
+
+      // 1. Tester la connexion
+      const testRes = await databaseService.testConnectionWithParams({
+        dbType: form.dbType,
+        host: form.host,
+        port: form.port,
+        databaseName: form.databaseName,
+        username: form.username,
+        password: form.passwordEncrypted,
+      });
+
+      if (testRes.data.success) {
+        // 2a. Connexion valide → sauvegarder et activer
+        if (editingProfile) {
+          await databaseService.update(editingProfile.id, form);
+        } else {
+          const saved = await databaseService.create(form);
+          await databaseService.activate(saved.data.id);
+        }
+        toast.success('✅ Profil valide — connecté avec succès');
       } else {
-        await databaseService.create(form);
-        toast.success(t('database.profile.created', { defaultValue: 'Profil créé' }));
+        // 2b. Connexion invalide → générer .properties + reconnexion auto
+        await databaseService.generatePropertiesAndReconnect({
+          profileName: form.profileName,
+          dbType: form.dbType,
+          host: form.host,
+          port: form.port,
+          databaseName: form.databaseName,
+          username: form.username,
+          password: form.passwordEncrypted,
+        });
+        toast.success('📄 Fichier .properties créé — reconnexion automatique en cours...');
       }
+
       setShowModal(false);
       loadProfiles();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Erreur');
+      toast.error(err.response?.data?.message || 'Erreur lors de la sauvegarde');
     } finally {
       setSaving(false);
     }
@@ -102,7 +129,15 @@ const DatabaseConfig = () => {
     try {
       setActivating(true);
       const res = await databaseService.activate(id);
-      toast.success(res.data.message);
+      toast.success(
+        <div>
+          <b>Profil activé avec succès</b>
+          <p style={{ marginTop: '8px', fontSize: '13px', lineHeight: '1.4' }}>
+            <b>Action requise :</b> Veuillez redémarrer l'application (serveur Spring Boot) pour appliquer le changement et vous connecter à cette base de données.
+          </p>
+        </div>,
+        { duration: 10000 }
+      );
       loadProfiles();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Activation échouée');

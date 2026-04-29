@@ -32,7 +32,7 @@ public class AuditController {
      * GET /api/admin/audit/logs — Liste paginée des logs avec filtres.
      *
      * Paramètres de filtrage optionnels :
-     * - userEmail : filtre par email utilisateur
+     * - username : filtre par username utilisateur
      * - actionType : filtre par type d'action
      * - entityType : filtre par type d'entité
      * - startDate  : date de début (ISO 8601)
@@ -41,18 +41,18 @@ public class AuditController {
     @GetMapping("/logs")
     @PreAuthorize("hasPermission('SYSTEM', 'AUDIT')")
     public ResponseEntity<Map<String, Object>> getAuditLogs(
-            @RequestParam(required = false) String userEmail,
-            @RequestParam(required = false) String actionType,
-            @RequestParam(required = false) String entityType,
-            @RequestParam(required = false)
+            @RequestParam(name = "username", required = false) String username,
+            @RequestParam(name = "actionType", required = false) String actionType,
+            @RequestParam(name = "entityType", required = false) String entityType,
+            @RequestParam(name = "startDate", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam(required = false)
+            @RequestParam(name = "endDate", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
 
         Page<AuditLog> logsPage = auditService.getLogs(
-            userEmail, actionType, entityType, startDate, endDate, page, size
+            username, actionType, entityType, startDate, endDate, page, size
         );
 
         return ResponseEntity.ok(Map.of(
@@ -68,7 +68,7 @@ public class AuditController {
      */
     @GetMapping("/logs/{id}")
     @PreAuthorize("hasPermission('SYSTEM', 'AUDIT')")
-    public ResponseEntity<AuditLog> getAuditLogById(@PathVariable Long id) {
+    public ResponseEntity<AuditLog> getAuditLogById(@PathVariable(name = "id") Long id) {
         return ResponseEntity.ok(auditService.getLogById(id));
     }
 
@@ -79,9 +79,9 @@ public class AuditController {
     @GetMapping("/export")
     @PreAuthorize("hasPermission('SYSTEM', 'AUDIT')")
     public ResponseEntity<List<AuditLog>> exportAuditLogs(
-            @RequestParam(required = false)
+            @RequestParam(name = "startDate", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam(required = false)
+            @RequestParam(name = "endDate", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
 
         List<AuditLog> logs = auditService.getLogsForExport(startDate, endDate);

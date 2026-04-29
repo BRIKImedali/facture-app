@@ -1,18 +1,20 @@
 package com.pfe.facturation.security.dto;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 /**
  * DTO pour la connexion.
+ *
+ * Changement v2 : authentification par username (identifiant de connexion)
+ * au lieu de l'email. Le username est assigné par l'administrateur lors de
+ * la création du compte (ex : "ahmed.benali", "EMP-042", etc.)
  */
 @Data
 public class LoginRequest {
 
-    @Email(message = "Format d'email invalide")
-    @NotBlank(message = "L'email est obligatoire")
-    private String email;
+    @NotBlank(message = "L'identifiant est obligatoire")
+    private String username;
 
     @NotBlank(message = "Le mot de passe est obligatoire")
     private String password;

@@ -39,7 +39,7 @@ class DebugFactureControllerTest {
 
     @Test
     void testFindById() throws Exception {
-        User admin = userRepository.findByEmail("admin@test.com").orElse(null);
+        User admin = userRepository.findByUsername("admin").orElse(null);
         Client client = new Client();
         client.setNom("MockMvc Client");
         clientRepository.save(client);
@@ -48,6 +48,7 @@ class DebugFactureControllerTest {
                 client.getId(),
                 null,
                 "notes",
+                null,
                 List.of(new CreateFactureRequest.LigneRequest(null, "Test Ligne", 5, new BigDecimal("100"), 20.0))
         );
 

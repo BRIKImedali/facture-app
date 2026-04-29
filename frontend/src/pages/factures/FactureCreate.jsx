@@ -15,6 +15,7 @@ const FactureCreate = () => {
   // Données du formulaire
   const [clientId, setClientId] = useState('');
   const [dateEcheance, setDateEcheance] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
   const [notes, setNotes] = useState('');
   const [lignes, setLignes] = useState([
     { produitId: '', designation: '', quantite: 1, prixUnitaireHT: '', tauxTva: 19 }
@@ -76,6 +77,7 @@ const FactureCreate = () => {
         clientId: parseInt(clientId),
         dateEcheance: dateEcheance || null,
         notes,
+        paymentMethod: paymentMethod || null,
         lignes: lignes.map(l => ({
           produitId: l.produitId ? parseInt(l.produitId) : null,
           designation: l.designation,
@@ -117,6 +119,15 @@ const FactureCreate = () => {
             <div className="form-group">
               <label>Date d'échéance</label>
               <input type="date" value={dateEcheance} onChange={e => setDateEcheance(e.target.value)} className="form-control" />
+            </div>
+            <div className="form-group">
+              <label>Mode de paiement par défaut</label>
+              <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="form-control">
+                <option value="">— Non défini —</option>
+                <option value="ESPECES">Espèces</option>
+                <option value="VIREMENT">Virement</option>
+                <option value="CHEQUE">Chèque</option>
+              </select>
             </div>
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label>Notes / Conditions de paiement</label>

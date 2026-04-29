@@ -16,5 +16,6 @@ public record ClientDTO(
         String ville,
         String codePostal,
         String pays,
-        String ice
+        String ice,
+        java.util.List<Long> categorieIds
 ) {}

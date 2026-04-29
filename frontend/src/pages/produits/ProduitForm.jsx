@@ -3,24 +3,41 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { produitService } from '../../services/produitService';
+import { uniteService } from '../../services/uniteService';
 
 const ProduitForm = () => {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(isEdit);
+  const [loading, setLoading] = useState(true);
+  const [unites, setUnites] = useState([]);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
-    defaultValues: { tauxTva: 19, unite: 'unité', actif: true }
+    defaultValues: { tauxTva: 19, uniteId: '', actif: true, stockQuantite: 0, stockMinimum: 0 }
   });
 
   useEffect(() => {
-    if (isEdit) {
-      produitService.getById(id)
-        .then(res => { reset(res.data); setLoading(false); })
-        .catch(() => { toast.error('Produit introuvable.'); setLoading(false); });
-    }
-  }, [id]);
+    const fetchData = async () => {
+      try {
+        const unitesRes = await uniteService.getAll();
+        setUnites(unitesRes.data || []);
+        
+        if (isEdit) {
+          const produitRes = await produitService.getById(id);
+          const data = produitRes.data;
+          if (data.unite) {
+            data.uniteId = data.unite.id;
+          }
+          reset(data);
+        }
+      } catch (err) {
+        toast.error('Erreur lors du chargement des données.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [id, isEdit, reset]);
 
   const onSubmit = async (data) => {
     const payload = { ...data, prixHT: parseFloat(data.prixHT), tauxTva: parseFloat(data.tauxTva) };
@@ -88,15 +105,24 @@ const ProduitForm = () => {
             </div>
 
             <div className="form-group">
-              <label>Unité</label>
-              <select {...register('unite')} className="form-control">
-                <option value="unité">Unité</option>
-                <option value="heure">Heure</option>
-                <option value="jour">Jour</option>
-                <option value="mois">Mois</option>
-                <option value="kg">Kg</option>
-                <option value="forfait">Forfait</option>
+              <label>Unité *</label>
+              <select {...register('uniteId', { required: 'L\'unité est obligatoire' })} className={`form-control ${errors.uniteId ? 'is-invalid' : ''}`}>
+                <option value="">Sélectionnez une unité...</option>
+                {unites.map(u => (
+                  <option key={u.id} value={u.id}>{u.nom}</option>
+                ))}
               </select>
+              {errors.uniteId && <span className="error-text">{errors.uniteId.message}</span>}
+            </div>
+
+            <div className="form-group">
+              <label>Quantité en stock</label>
+              <input type="number" {...register('stockQuantite')} className="form-control" />
+            </div>
+
+            <div className="form-group">
+              <label>Stock minimum</label>
+              <input type="number" {...register('stockMinimum')} className="form-control" />
             </div>
 
             <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.5rem' }}>

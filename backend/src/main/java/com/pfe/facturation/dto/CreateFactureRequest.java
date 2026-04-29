@@ -17,6 +17,7 @@ public record CreateFactureRequest(
         @NotNull(message = "Le client est obligatoire") Long clientId,
         LocalDate dateEcheance,
         String notes,
+        String paymentMethod,
         @NotEmpty(message = "La facture doit contenir au moins une ligne") List<LigneRequest> lignes
 ) {
 

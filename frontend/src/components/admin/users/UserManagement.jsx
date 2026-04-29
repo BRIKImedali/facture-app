@@ -14,9 +14,11 @@ const UserManagement = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedRoleIds, setSelectedRoleIds] = useState([]);
   const [newPassword, setNewPassword] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [newUser, setNewUser] = useState({ username: '', nom: '', prenom: '', password: '', roleIds: [] });
 
   useEffect(() => {
     loadUsers();
@@ -112,6 +114,34 @@ const UserManagement = () => {
     }
   };
 
+  const handleCreateUser = async () => {
+    if (!newUser.username || !newUser.password || newUser.password.length < 8 || newUser.roleIds.length === 0) {
+      toast.error('Veuillez remplir tous les champs obligatoires et sélectionner au moins un rôle');
+      return;
+    }
+    try {
+      setActionLoading(true);
+      await userService.create(newUser);
+      toast.success('Utilisateur créé avec succès');
+      setShowCreateModal(false);
+      setNewUser({ username: '', nom: '', prenom: '', password: '', roleIds: [] });
+      loadUsers();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Erreur lors de la création');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const toggleNewUserRole = (id) => {
+    setNewUser(prev => ({
+      ...prev,
+      roleIds: prev.roleIds.includes(id)
+        ? prev.roleIds.filter(r => r !== id)
+        : [...prev.roleIds, id]
+    }));
+  };
+
   const toggleRoleId = (id) => {
     setSelectedRoleIds(prev =>
       prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]
@@ -120,9 +150,14 @@ const UserManagement = () => {
 
   return (
     <div>
-      <div className="page-header">
-        <h1 className="page-header-title">👥 {t('users.title')}</h1>
-        <p className="page-header-subtitle">{t('users.subtitle')}</p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1 className="page-header-title">👥 {t('users.title')}</h1>
+          <p className="page-header-subtitle">{t('users.subtitle')}</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
+          + Nouvel Utilisateur
+        </button>
       </div>
 
       <div className="admin-card">
@@ -152,7 +187,7 @@ const UserManagement = () => {
               <thead>
                 <tr>
                   <th>{t('users.firstName')} / {t('users.lastName')}</th>
-                  <th>{t('users.email')}</th>
+                  <th>Identifiant</th>
                   <th>{t('users.role')}</th>
                   <th>{t('users.appRoles')}</th>
                   <th>{t('users.status')}</th>
@@ -166,7 +201,7 @@ const UserManagement = () => {
                       <div style={{ fontWeight: 600 }}>{user.prenom} {user.nom}</div>
                     </td>
                     <td style={{ color: 'var(--admin-text-muted)', fontFamily: 'monospace', fontSize: 13 }}>
-                      {user.email}
+                      {user.username}
                     </td>
                     <td>
                       <span className="badge badge-primary">{user.role}</span>
@@ -252,7 +287,7 @@ const UserManagement = () => {
         <div className="modal-overlay" onClick={() => setShowRoleModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">🔑 {t('users.assign_roles')} — {selectedUser.email}</h3>
+              <h3 className="modal-title">🔑 {t('users.assign_roles')} — {selectedUser.username}</h3>
               <button className="modal-close" onClick={() => setShowRoleModal(false)}>✕</button>
             </div>
             <div className="modal-body">
@@ -317,7 +352,7 @@ const UserManagement = () => {
             </div>
             <div className="modal-body">
               <p style={{ color: 'var(--admin-text-muted)', marginBottom: 16 }}>
-                Utilisateur : <strong>{selectedUser.email}</strong>
+                Utilisateur : <strong>{selectedUser.username}</strong>
               </p>
               <div className="form-group">
                 <label className="form-label">{t('users.new_password')} <span className="required">*</span></label>
@@ -341,6 +376,87 @@ const UserManagement = () => {
                 disabled={actionLoading || newPassword.length < 8}
               >
                 {actionLoading ? t('common.loading') : t('common.confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL : Création utilisateur */}
+      {showCreateModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">➕ Créer un utilisateur</h3>
+              <button className="modal-close" onClick={() => setShowCreateModal(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Identifiant (ex: USR-001) <span className="required">*</span></label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={newUser.username}
+                  onChange={e => setNewUser({ ...newUser, username: e.target.value })}
+                  placeholder="USR-001"
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="form-label">Prénom</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={newUser.prenom}
+                    onChange={e => setNewUser({ ...newUser, prenom: e.target.value })}
+                  />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="form-label">Nom</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={newUser.nom}
+                    onChange={e => setNewUser({ ...newUser, nom: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Mot de passe <span className="required">*</span></label>
+                <input
+                  type="password"
+                  className="form-input"
+                  value={newUser.password}
+                  onChange={e => setNewUser({ ...newUser, password: e.target.value })}
+                  placeholder="Minimum 8 caractères"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Rôles <span className="required">*</span></label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 150, overflowY: 'auto', padding: 8, border: '1px solid var(--admin-border)', borderRadius: 6 }}>
+                  {roles.map(role => (
+                    <label key={role.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={newUser.roleIds.includes(role.id)}
+                        onChange={() => toggleNewUserRole(role.id)}
+                      />
+                      <span style={{ fontSize: 13 }}>{role.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setShowCreateModal(false)}>
+                {t('common.cancel')}
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleCreateUser}
+                disabled={actionLoading}
+              >
+                {actionLoading ? t('common.loading') : 'Créer'}
               </button>
             </div>
           </div>

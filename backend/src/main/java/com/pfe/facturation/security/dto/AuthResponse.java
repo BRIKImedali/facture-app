@@ -2,17 +2,35 @@ package com.pfe.facturation.security.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import java.util.List;
 
 /**
- * DTO de réponse après connexion/inscription réussie.
- * Ce sont les données que le frontend React va recevoir et stocker.
+ * DTO de réponse après connexion réussie.
+ * Ces données sont stockées côté client (localStorage) et utilisées
+ * pour adapter l'interface (menus, boutons selon permissions).
+ *
+ * Changement v2 :
+ * - 'email' remplacé par 'username' (identifiant de connexion)
+ * - 'permissions' ajouté pour le contrôle d'accès côté frontend
  */
 @Data
 @AllArgsConstructor
 public class AuthResponse {
-    private String token;      // Le token JWT à utiliser pour les prochaines requêtes
-    private String email;      // Email de l'utilisateur connecté
-    private String nom;        // Pour afficher dans l'interface (ex: "Bonjour, Mohamed")
+    /** Token JWT à envoyer dans les headers Authorization: Bearer <token> */
+    private String token;
+
+    /** Identifiant de connexion de l'utilisateur */
+    private String username;
+
+    /** Nom de famille */
+    private String nom;
+
+    /** Prénom */
     private String prenom;
-    private String role;       // ADMIN ou USER (pour adapter l'interface côté React)
+
+    /** Rôle système : ADMIN ou USER */
+    private String role;
+
+    /** Liste des permissions granulaires (FACTURE:CREATE, CLIENT:READ, ...) */
+    private List<String> permissions;
 }

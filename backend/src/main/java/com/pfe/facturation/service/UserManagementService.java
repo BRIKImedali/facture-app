@@ -5,6 +5,7 @@ import com.pfe.facturation.aspect.Auditable;
 import com.pfe.facturation.model.AppRole;
 import com.pfe.facturation.repository.AppRoleRepository;
 import com.pfe.facturation.security.entity.User;
+import com.pfe.facturation.security.entity.Role;
 import com.pfe.facturation.security.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -47,9 +48,49 @@ public class UserManagementService {
         );
     }
 
-    /** Recherche d'utilisateurs par email ou nom */
+    /** Recherche d'utilisateurs par email, nom ou prénom */
     public List<User> searchUsers(String query) {
-        return userRepository.searchByEmailOrName(query);
+        // Utilise la méthode correcte définie dans UserRepository
+        return userRepository.searchByUsernameOrName(query);
+    }
+
+    /**
+     * Crée un nouvel utilisateur depuis l'interface d'administration.
+     *
+     * @param username Identifiant de connexion unique
+     * @param password Mot de passe en clair (sera hashé avec BCrypt)
+     * @param nom      Nom de famille
+     * @param prenom   Prénom
+     * @param role     Rôle système : "ADMIN", "USER", "COMPTABLE"...
+     */
+    @Auditable(action = "CREATE", entity = "User", description = "Création d'un nouvel utilisateur")
+    @Transactional
+    public User createUser(String username, String password, Set<Long> roleIds, String nom, String prenom) {
+        // Vérifier que le username n'est pas déjà utilisé
+        if (userRepository.existsByUsername(username)) {
+            throw new RuntimeException("Un utilisateur avec cet identifiant existe déjà : " + username);
+        }
+        if (password == null || password.length() < 8) {
+            throw new RuntimeException("Le mot de passe doit contenir au moins 8 caractères");
+        }
+
+        // Récupérer les rôles applicatifs
+        List<AppRole> roles = (roleIds == null || roleIds.isEmpty())
+            ? new ArrayList<>()
+            : appRoleRepository.findAllByIdIn(roleIds);
+
+        User newUser = User.builder()
+            .username(username)
+            .password(passwordEncoder.encode(password))
+            .nom(nom)
+            .prenom(prenom)
+            .role(Role.USER) // Valeur par défaut pour compatibilité
+            .appRoles(roles)
+            .isActive(true)
+            .build();
+
+        log.info("Création d'un nouvel utilisateur : '{}' avec {} rôle(s)", username, roles.size());
+        return userRepository.save(newUser);
     }
 
     /** Récupère un utilisateur par son ID */
@@ -69,7 +110,7 @@ public class UserManagementService {
         boolean newStatus = !Boolean.TRUE.equals(user.getIsActive());
         user.setIsActive(newStatus);
 
-        log.info("Compte utilisateur '{}' : {}", user.getEmail(),
+        log.info("Compte utilisateur '{}' : {}", user.getUsername(),
             newStatus ? "ACTIVÉ" : "DÉSACTIVÉ");
         return userRepository.save(user);
     }
@@ -93,7 +134,7 @@ public class UserManagementService {
 
         user.setAppRoles(roles);
 
-        log.info("Assignation de {} rôle(s) à l'utilisateur '{}'", roles.size(), user.getEmail());
+        log.info("Assignation de {} rôle(s) à l'utilisateur '{}'", roles.size(), user.getUsername());
         return userRepository.save(user);
     }
 
@@ -114,13 +155,13 @@ public class UserManagementService {
         User user = getUserById(userId);
         user.setPassword(passwordEncoder.encode(newPassword));
 
-        log.info("Mot de passe réinitialisé pour l'utilisateur '{}'", user.getEmail());
+        log.info("Mot de passe réinitialisé pour l'utilisateur '{}'", user.getUsername());
         userRepository.save(user);
     }
 
     /**
      * Met à jour les informations d'un utilisateur (nom, prénom).
-     * L'email ne peut pas être modifié (identifiant unique).
+     * L'identifiant (username) ne peut pas être modifié.
      */
     @Auditable(action = "UPDATE", entity = "User", description = "Modification d'un utilisateur")
     @Transactional
@@ -128,7 +169,7 @@ public class UserManagementService {
         User user = getUserById(id);
         user.setNom(nom);
         user.setPrenom(prenom);
-        log.info("Mise à jour de l'utilisateur '{}'", user.getEmail());
+        log.info("Mise à jour de l'utilisateur '{}'", user.getUsername());
         return userRepository.save(user);
     }
 

@@ -96,7 +96,7 @@ const ClientList = () => {
                 <th>Email</th>
                 <th>Téléphone</th>
                 <th>Ville</th>
-                <th>ICE</th>
+                <th>Catégories</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
@@ -107,7 +107,23 @@ const ClientList = () => {
                   <td>{c.email || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
                   <td>{c.telephone || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
                   <td>{c.ville || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
-                  <td>{c.ice || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
+                  <td>
+                    {c.categories && c.categories.length > 0 ? (
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                        {c.categories.map(cat => (
+                          <span key={cat.id} style={{ 
+                            background: '#e0e7ff', color: '#3730a3', 
+                            padding: '2px 8px', borderRadius: '12px', 
+                            fontSize: '0.75rem', fontWeight: 500 
+                          }}>
+                            {cat.nom}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span style={{ color: '#cbd5e1' }}>—</span>
+                    )}
+                  </td>
                   <td>
                     {user?.role === 'ADMIN' ? (
                       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
