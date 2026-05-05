@@ -2,7 +2,7 @@
 
 > Application web professionnelle de facturation pour PME — Projet de Fin d'Études (PFE)
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-brightgreen)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-brightgreen)](https://spring.io/projects/spring-boot)
 [![React](https://img.shields.io/badge/React-18-blue)](https://reactjs.org/)
 [![Java](https://img.shields.io/badge/Java-17-orange)](https://www.java.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -13,12 +13,12 @@
 
 - [Fonctionnalités](#-fonctionnalités)
 - [Architecture](#-architecture)
+- [Diagrammes UML](#-diagrammes-uml)
 - [Prérequis](#-prérequis)
 - [Installation et Démarrage](#-installation-et-démarrage)
 - [Comptes de test](#-comptes-de-test)
 - [Configuration IA (Gemini)](#-configuration-ia-gemini)
 - [Endpoints API](#-endpoints-api)
-- [Tests](#-tests)
 - [Structure du projet](#-structure-du-projet)
 
 ---
@@ -30,60 +30,210 @@
 - ✅ Numérotation automatique `FAC-YYYY-XXXX`
 - ✅ Gestion du cycle de vie : `BROUILLON → ENVOYÉE → PAYÉE / ANNULÉE`
 - ✅ Téléchargement PDF (Thymeleaf + Flying Saucer)
-- ✅ Export XML structuré
+- ✅ Export XML structuré pour l'ERP
 
-### Gestion des clients et produits
-- ✅ CRUD complet clients avec informations fiscales (ICE)
-- ✅ Catalogue de produits/services avec TVA configurables
+### Gestion des clients, produits et stocks
+- ✅ CRUD complet clients avec informations fiscales (ICE, catégories)
+- ✅ Catalogue de produits/services avec TVA et unités configurables
+- ✅ Gestion de stock multi-sites (Site, Emplacement, Stock) avec alertes de seuil minimum
 
 ### Intelligence Artificielle (Google Gemini)
 - ✅ **ChatBot intégré** — Posez des questions de comptabilité et de facturation
 - ✅ **Validation IA** — Détection automatique d'erreurs (TVA, calculs, incohérences)
 
-### Tableau de bord (ADMIN)
-- ✅ Statistiques en temps réel : Clients, Produits, Factures, CA encaissé
-- ✅ Graphique d'évolution du CA mensuel (Recharts)
-- ✅ Classement Top 5 Clients par chiffre d'affaires
-
-### Sécurité
-- ✅ Authentification JWT (Stateless)
-- ✅ Gestion des rôles `ADMIN` / `USER`
-- ✅ Statistiques financières réservées aux ADMIN
+### Administration & Sécurité
+- ✅ Authentification JWT robuste
+- ✅ **Gestion des rôles (AppRole)** et permissions granulaires (`FACTURE:CREATE`, `CLIENT:READ`, etc.)
+- ✅ Audit complet des actions (`AuditLog`)
+- ✅ Tableau de bord avec statistiques financières, évolution du CA et top clients
+- ✅ Paramétrage ERP et gestion de la base de données intégrée
 
 ---
 
 ## 🏗️ Architecture
 
-```
-facturation-app/
-├── backend/          # Spring Boot 3 (Java 17)
-│   ├── src/main/java/com/pfe/facturation/
-│   │   ├── controller/   # REST Controllers
-│   │   ├── service/      # Logique métier
-│   │   ├── repository/   # Spring Data JPA
-│   │   ├── entity/       # Entités JPA
-│   │   ├── dto/          # DTOs (Records Java)
-│   │   └── security/     # JWT, Spring Security
-│   └── src/main/resources/
-│       └── templates/    # Template PDF (Thymeleaf)
-│
-└── frontend/         # React 18 + Vite
-    └── src/
-        ├── pages/    # Dashboard, Factures, Clients, Produits
-        ├── services/ # Axios API Services
-        └── components/ # Layout, ChatAssistant, PrivateRoute
+```mermaid
+graph LR
+    subgraph Frontend["Frontend — React 18"]
+        Pages["Pages\n(FactureForm, LoginPage...)"]
+        Services["Services API\n(axios + JWT)"]
+        Context["AuthContext\n(useState + localStorage)"]
+    end
+
+    subgraph Backend["Backend — Spring Boot 3.2"]
+        Controllers["Controllers\n(@RestController)"]
+        Security["Security Filter\n(JwtAuthFilter)"]
+        AppServices["Services\n(@Service @Transactional)"]
+        Repos["Repositories\n(JpaRepository)"]
+    end
+
+    subgraph DB["Persistance"]
+        MySQL[(MySQL / PostgreSQL\nJPA / Hibernate)]
+    end
+
+    Pages --> Services
+    Services -->|HTTP + Bearer JWT| Controllers
+    Controllers --> Security
+    Security --> AppServices
+    AppServices --> Repos
+    Repos --> MySQL
 ```
 
 **Stack technique :**
 | Couche | Technologie |
 |--------|-------------|
-| Backend | Spring Boot 3.5, Spring Security 6, Spring Data JPA |
+| Backend | Spring Boot 3.2, Spring Security, Spring Data JPA |
 | Base de données | H2 (dev) / PostgreSQL (prod) |
-| Frontend | React 18, Vite, Recharts, React Hot Toast |
+| Frontend | React 18, Vite, Recharts, React Router v6 |
 | Auth | JWT (jjwt) |
 | IA | Google Gemini API (via REST) |
 | PDF | Thymeleaf + Flying Saucer (OpenPDF) |
-| Tests | JUnit 5, Mockito |
+
+---
+
+## 📐 Diagrammes UML
+
+### 1. Diagramme de Classes (Entités du Domaine)
+
+```mermaid
+classDiagram
+    direction TB
+
+    class User {
+        <<Entity>>
+        - Long id
+        - String username
+        - String password
+        - Boolean isActive
+        + boolean hasPermission(String permissionString)
+    }
+
+    class AppRole {
+        <<Entity>>
+        - String name
+        - Boolean isSystemRole
+    }
+
+    class Permission {
+        <<Entity>>
+        - String entity
+        - String action
+    }
+
+    class Facture {
+        <<Entity>>
+        - String numero
+        - StatutFacture statut
+        - BigDecimal totalTTC
+    }
+
+    class Client {
+        <<Entity>>
+        - String nom
+        - String email
+        - String ice
+    }
+
+    class LigneFacture {
+        <<Entity>>
+        - Integer quantite
+        - BigDecimal montantTTC
+    }
+
+    class Produit {
+        <<Entity>>
+        - String reference
+        - String nom
+        - BigDecimal prixHT
+    }
+
+    class Site {
+        <<Entity>>
+        - String nom
+        - String ville
+    }
+
+    class Emplacement {
+        <<Entity>>
+        - String zone
+        - String rayon
+    }
+
+    class Stock {
+        <<Entity>>
+        - Integer quantite
+        - Integer seuilMinimum
+        + boolean isEnAlerte()
+    }
+
+    %% Relations
+    User "0..*" o-- "0..*" AppRole : appRoles
+    AppRole "0..*" o-- "0..*" Permission : permissions
+    Facture "0..*" --> "1" Client : client
+    Facture "0..*" --> "0..1" User : createdBy
+    Facture "1" *-- "0..*" LigneFacture : lignes
+    LigneFacture "0..*" --> "0..1" Produit : produit
+    Site "1" *-- "0..*" Emplacement : emplacements
+    Site "1" *-- "0..*" Stock : stocks
+    Stock "0..*" --> "1" Produit : produit
+    Stock "0..*" --> "1" Site : site
+    Stock "0..*" --> "0..1" Emplacement : emplacement
+```
+
+### 2. Diagramme de Cas d'Utilisation
+
+```mermaid
+graph TB
+    subgraph Acteurs
+        ADMIN([👤 Admin])
+        USER([👤 User])
+    end
+
+    subgraph UC["🧾 FacturaPro — Fonctionnalités"]
+        UC_Auth(Authentification JWT)
+        UC_Fact(Gérer les Factures)
+        UC_Cli(Gérer les Clients)
+        UC_Prod(Gérer les Produits & Stocks)
+        UC_Admin(Administration : Users, Rôles, Audits)
+        UC_IA(Interagir avec l'IA)
+    end
+
+    ADMIN --> UC_Auth
+    ADMIN --> UC_Fact
+    ADMIN --> UC_Cli
+    ADMIN --> UC_Prod
+    ADMIN --> UC_Admin
+    ADMIN --> UC_IA
+
+    USER --> UC_Auth
+    USER -.->|selon permissions| UC_Fact
+    USER -.->|selon permissions| UC_Cli
+    USER -.->|selon permissions| UC_Prod
+```
+
+### 3. Diagramme de Séquence : Création d'une Facture
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Utilisateur as 👤 Utilisateur
+    participant React as React (Frontend)
+    participant Ctrl as FactureController
+    participant Svc as FactureService
+    participant DB as 🗄️ Base de données
+
+    Utilisateur->>React: Soumet le formulaire de facture
+    React->>Ctrl: POST /api/factures (avec JWT)
+    Ctrl->>Svc: create(Request)
+    Svc->>DB: Vérifie l'existence du client
+    Svc->>Svc: Génère numéro unique (FAC-YYYY-XXXX)
+    Svc->>Svc: Calcule les totaux HT, TVA, TTC
+    Svc->>DB: Sauvegarde Facture + Lignes (cascade)
+    DB-->>Svc: Entité persistée
+    Svc-->>Ctrl: DTO FactureResponse
+    Ctrl-->>React: HTTP 201 Created
+    React-->>Utilisateur: Confirmation de création
+```
 
 ---
 
@@ -130,10 +280,10 @@ npm run dev
 
 Les comptes suivants sont créés automatiquement au premier démarrage :
 
-| Rôle | Email | Mot de passe |
+| Rôle | Username / Identifiant | Mot de passe |
 |------|-------|--------------|
-| **ADMIN** | `admin@test.com` | `admin123` |
-| **USER** | `user@test.com` | `user123` |
+| **ADMIN** | `admin` | `admin123` |
+| **USER** | `user` | `user123` |
 
 ---
 
@@ -157,130 +307,35 @@ La documentation Swagger interactive est disponible sur : `http://localhost:8080
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
 | POST | `/api/auth/login` | Connexion (retourne JWT) |
-| POST | `/api/auth/register` | Inscription |
 | GET | `/api/factures` | Liste des factures |
 | POST | `/api/factures` | Créer une facture |
 | PATCH | `/api/factures/{id}/statut` | Changer le statut |
-| GET | `/api/factures/{id}/export-pdf` | Télécharger le PDF |
+| GET | `/api/factures/{id}/pdf` | Télécharger le PDF |
 | GET | `/api/factures/{id}/export-xml` | Exporter en XML |
 | POST | `/api/ai/chat` | Poser une question à l'IA |
-| POST | `/api/ai/valider-facture` | Valider une facture par IA |
 | GET | `/api/dashboard/stats` | Statistiques Dashboard |
-
----
-
-## 🧪 Tests
-
-Lancer les tests unitaires :
-
-```bash
-cd backend
-mvn test
-```
-
-Les tests couvrent :
-- **Transitions de statut** : BROUILLON → ENVOYÉE, états terminaux (PAYÉE, ANNULÉE)
-- **Calculs BigDecimal** : HT × Quantité, TVA, TTC sur plusieurs lignes
-- **Suppression protégée** : Impossible de supprimer une facture PAYÉE
-- **Gestion des erreurs** : Client introuvable, facture introuvable
 
 ---
 
 ## 📂 Structure du projet
 
 ```
-backend/src/main/java/com/pfe/facturation/
-├── controller/
-│   ├── FactureController.java    # CRUD Factures + PDF/XML
-│   ├── ClientController.java
-│   ├── ProduitController.java
-│   ├── DashboardController.java
-│   └── AiController.java         # Chat IA + Validation
-├── service/
-│   ├── FactureService.java       # Logique métier principale
-│   ├── PdfService.java           # Génération PDF
-│   ├── XmlExportService.java     # Export XML
-│   ├── AiChatService.java        # Intégration Gemini API
-│   └── FactureValidationService.java
-├── entity/
-│   ├── Facture.java
-│   ├── LigneFacture.java
-│   ├── Client.java
-│   └── Produit.java
-└── security/
-    ├── config/SecurityConfig.java
-    ├── jwt/JwtUtil.java
-    └── entity/User.java
+facturation-app/
+├── backend/          # Spring Boot 3.2 (Java 17)
+│   ├── src/main/java/com/pfe/facturation/
+│   │   ├── controller/   # REST Controllers
+│   │   ├── service/      # Logique métier
+│   │   ├── repository/   # Spring Data JPA
+│   │   ├── entity/       # Entités JPA Métier
+│   │   ├── model/        # Entités Administration & Rôles
+│   │   └── security/     # JWT, Configuration Sécurité
+│   └── src/main/resources/
+│       └── templates/    # Templates Thymeleaf (PDF)
+│
+└── frontend/         # React 18 + Vite
+    └── src/
+        ├── components/   # Composants réutilisables
+        ├── context/      # Contextes React (AuthContext)
+        ├── pages/        # Vues principales (Dashboard, Factures...)
+        └── services/     # Appels API (Axios)
 ```
-
----
-
-## 🗄️ Schéma Entité-Relation (ER)
-
-```mermaid
-erDiagram
-    USERS {
-        BIGINT id PK
-        VARCHAR email UK
-        VARCHAR password
-        VARCHAR nom
-        VARCHAR prenom
-        VARCHAR role "USER | ADMIN"
-    }
-
-    CLIENTS {
-        BIGINT id PK
-        VARCHAR nom
-        VARCHAR email
-        VARCHAR telephone
-        VARCHAR adresse
-        VARCHAR ville
-        VARCHAR codePostal
-        VARCHAR pays
-        VARCHAR ice "Numéro fiscal"
-    }
-
-    PRODUITS {
-        BIGINT id PK
-        VARCHAR nom
-        VARCHAR reference
-        TEXT description
-        DECIMAL prixHT
-        DOUBLE tauxTva "0 | 7 | 10 | 14 | 20"
-        VARCHAR unite "unité, heure, jour..."
-        BOOLEAN actif
-    }
-
-    FACTURES {
-        BIGINT id PK
-        VARCHAR numero UK "FAC-YYYY-XXXX"
-        VARCHAR statut "BROUILLON|ENVOYEE|PAYEE|ANNULEE"
-        TIMESTAMP dateEmission
-        DATE dateEcheance
-        TEXT notes
-        DECIMAL totalHT
-        DECIMAL totalTva
-        DECIMAL totalTTC
-        BIGINT client_id FK
-        BIGINT user_id FK
-    }
-
-    LIGNES_FACTURE {
-        BIGINT id PK
-        VARCHAR designation
-        INTEGER quantite
-        DECIMAL prixUnitaireHT
-        DOUBLE tauxTva
-        DECIMAL montantHT
-        DECIMAL montantTva
-        DECIMAL montantTTC
-        BIGINT facture_id FK
-        BIGINT produit_id FK "Nullable"
-    }
-
-    CLIENTS     ||--o{ FACTURES        : "est facturé par"
-    USERS       ||--o{ FACTURES        : "crée"
-    FACTURES    ||--|{ LIGNES_FACTURE  : "contient"
-    PRODUITS    |o--o{ LIGNES_FACTURE  : "référencé par"
-```
-
