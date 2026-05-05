@@ -362,106 +362,79 @@ classDiagram
 > Acteurs identifiés depuis les annotations `@PreAuthorize`, les rôles `Role.ADMIN`/`Role.USER` et le système de permissions granulaires `ENTITY:ACTION`. Les relations `<<include>>` et `<<extend>>` suivent la notation UML 2.5.
 
 ```mermaid
-graph TB
-    subgraph Acteurs
-        ADMIN([👤 Admin\nrole = ADMIN\nSUPER_ADMIN])
-        USER([👤 User\nrole = USER])
-        SYSTEM([⚙️ Système\nTimer / ERP])
+graph LR
+    %% ==== Acteurs ====
+    ADMIN(["👤 Administrateur\n(Contrôle total)"])
+    USER(["👤 Utilisateur\n(Selon permissions)"])
+    SYSTEM(["⚙️ ERP / API Externe"])
+
+    %% ==== Frontière du Système ====
+    subgraph "Système FacturaPro"
+        direction TB
+
+        subgraph "🔐 Sécurité"
+            UC_Auth("S'authentifier (JWT)")
+        end
+
+        subgraph "🧾 Module Facturation"
+            UC_Factures("Gérer les factures (CRUD)")
+            UC_Paiement("Suivre les paiements")
+            UC_Export("Générer PDF et XML")
+            UC_Email("Envoyer par email")
+        end
+
+        subgraph "📦 Module Commercial"
+            UC_Clients("Gérer les clients & ICE")
+            UC_Produits("Gérer le catalogue produits")
+            UC_Stock("Gérer les stocks multi-sites")
+        end
+
+        subgraph "⚙️ Module Administration"
+            UC_Dashboard("Consulter Tableau de bord")
+            UC_Users("Gérer les utilisateurs & Rôles")
+            UC_Audit("Consulter journal d'audit")
+            UC_Config("Configurer la base & ERP")
+        end
+        
+        subgraph "🤖 Intelligence Artificielle"
+            UC_Chat("Interagir avec l'Assistant")
+            UC_Validate("Valider les factures par IA")
+        end
     end
 
-    subgraph UC["🧾 FacturaPro — Cas d'utilisation"]
+    %% ==== Associations Acteurs -> Cas d'utilisation ====
+    
+    %% Utilisateur standard
+    USER --> UC_Auth
+    USER --> UC_Factures
+    USER --> UC_Clients
+    USER --> UC_Produits
+    USER --> UC_Stock
+    USER --> UC_Export
+    USER --> UC_Email
+    
+    %% Administrateur (hérite ou a des accès spécifiques)
+    ADMIN --> UC_Auth
+    ADMIN --> UC_Dashboard
+    ADMIN --> UC_Users
+    ADMIN --> UC_Audit
+    ADMIN --> UC_Config
+    ADMIN --> UC_Paiement
+    ADMIN --> UC_Chat
+    ADMIN --> UC_Validate
+    
+    %% Note: Admin hérite implicitement des droits User mais pour la lisibilité
+    %% on peut faire hériter l'acteur
+    ADMIN ---|> USER
 
-        subgraph AUTH["🔐 Authentification"]
-            UC1(Se connecter\nPOST /api/auth/login)
-            UC2(Consulter profil\nGET /api/auth/me)
-            UC3(Générer Token JWT\nHS256 + permissions)
-        end
+    %% ==== Extensions et Inclusions ====
+    UC_Export -. "«extend»" .-> UC_Factures
+    UC_Email -. "«extend»" .-> UC_Factures
+    UC_Validate -. "«extend»" .-> UC_Factures
 
-        subgraph FACT["🧾 Gestion des Factures\n@PreAuthorize FACTURE:*"]
-            UC4(Lister les factures\nFACTURE:READ)
-            UC5(Créer une facture\nFACTURE:CREATE)
-            UC6(Changer statut facture\nFACTURE:UPDATE)
-            UC7(Supprimer une facture\nFACTURE:DELETE)
-            UC8(Générer PDF\nFACTURE:READ)
-            UC9(Exporter XML / ERP\nFACTURE:READ)
-            UC10(Envoyer par Email\nFACTURE:READ)
-        end
-
-        subgraph CLIENT["👥 Gestion des Clients\nCLIENT:*"]
-            UC11(Lister les clients\nCLIENT:READ)
-            UC12(Créer / Modifier client\nCLIENT:CREATE/UPDATE)
-            UC13(Supprimer un client\nCLIENT:DELETE)
-            UC14(Gérer catégories client)
-        end
-
-        subgraph PROD["📦 Gestion des Produits\nPRODUIT:*"]
-            UC15(Lister les produits\nPRODUIT:READ)
-            UC16(Créer / Modifier produit\nPRODUIT:CREATE/UPDATE)
-            UC17(Gérer les unités)
-            UC18(Gérer le stock\nSite / Emplacement)
-        end
-
-        subgraph ADMIN_UC["⚙️ Administration\nSUPER_ADMIN uniquement"]
-            UC19(Gérer les utilisateurs\nCRUD User)
-            UC20(Gérer les rôles\nAppRole + Permissions)
-            UC21(Tableau de bord Admin\nstatistiques globales)
-            UC22(Consulter les audits\nAuditLog)
-            UC23(Configurer ERP\nErpConfig + Sync)
-            UC24(Configurer base de données\nDatabaseProfile)
-            UC25(Chat IA\nOpenAI / Gemini)
-        end
-
-    end
-
-    %% === Relations ADMIN ===
-    ADMIN --> UC1
-    ADMIN --> UC2
-    ADMIN --> UC4
-    ADMIN --> UC5
-    ADMIN --> UC6
-    ADMIN --> UC7
-    ADMIN --> UC8
-    ADMIN --> UC9
-    ADMIN --> UC10
-    ADMIN --> UC11
-    ADMIN --> UC12
-    ADMIN --> UC13
-    ADMIN --> UC14
-    ADMIN --> UC15
-    ADMIN --> UC16
-    ADMIN --> UC17
-    ADMIN --> UC18
-    ADMIN --> UC19
-    ADMIN --> UC20
-    ADMIN --> UC21
-    ADMIN --> UC22
-    ADMIN --> UC23
-    ADMIN --> UC24
-    ADMIN --> UC25
-
-    %% === Relations USER (selon permissions) ===
-    USER --> UC1
-    USER --> UC2
-    USER -.->|selon permission| UC4
-    USER -.->|selon permission| UC5
-    USER -.->|selon permission| UC6
-    USER -.->|selon permission| UC8
-    USER -.->|selon permission| UC11
-    USER -.->|selon permission| UC12
-    USER -.->|selon permission| UC15
-    USER -.->|selon permission| UC18
-
-    %% === Relations SYSTEM ===
-    SYSTEM -.->|scheduled / webhook| UC23
-
-    %% === Include / Extend ===
-    UC1 -->|«include»| UC3
-    UC5 -->|«include»| UC4
-    UC8 -->|«extend»| UC5
-    UC9 -->|«extend»| UC5
-    UC10 -->|«extend»| UC8
-    UC5 -->|«include»| UC11
-    UC5 -->|«include»| UC15
+    %% ==== Interactions Système ====
+    UC_Config <-->|Synchronisation| SYSTEM
+    UC_Chat <-->|Requêtes Gemini| SYSTEM
 ```
 
 ### 3. Diagrammes de Séquence
