@@ -505,3 +505,133 @@
   }
 }
 
+/* ============================================================
+   ACCORDION MULTI-NIVEAUX — Section Produits
+   ============================================================ */
+
+/* ── Groupe accordion (wrapper) ── */
+.accordion-group {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Bouton d'en-tête de l'accordion ── */
+.accordion-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  position: relative;
+}
+
+.accordion-trigger:hover {
+  background: var(--sidebar-hover);
+  color: var(--text-primary);
+  transform: translateX(2px);
+}
+
+/* Niveau 2 — sous-groupe */
+.accordion-trigger.depth-2 {
+  font-size: 0.845rem;
+  padding: 0.55rem 0.875rem;
+  border-radius: 8px;
+  color: #94a3b8;
+}
+.accordion-trigger.depth-2:hover {
+  color: var(--text-primary);
+}
+
+/* ── Label ── */
+.accordion-label {
+  flex: 1;
+}
+
+/* ── Chevron animé ── */
+.accordion-chevron {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  transition: transform 0.25s ease, color 0.2s;
+  line-height: 1;
+  display: inline-block;
+}
+.accordion-chevron.open {
+  transform: rotate(90deg);
+  color: var(--accent-light);
+}
+
+/* ── Corps expandable (hauteur animée via max-height) ── */
+.accordion-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.accordion-body--open {
+  max-height: 600px; /* suffisamment grand pour tous les enfants */
+}
+
+/* ── Contenu interne avec barre latérale visuelle ── */
+.accordion-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.25rem 0 0.25rem 1.1rem;
+  margin-left: 1rem;
+  border-left: 1.5px solid rgba(99, 102, 241, 0.25);
+}
+
+/* Sous-accordions dans le contenu interne */
+.accordion-inner > .accordion-group {
+  /* pas de padding supplémentaire, la barre latérale suffit */
+}
+
+/* ── Feuille — lien final de navigation ── */
+.accordion-leaf {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 7px;
+  text-decoration: none;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 400;
+  transition: all 0.2s ease;
+}
+
+.accordion-leaf:hover {
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--text-primary);
+  transform: translateX(2px);
+}
+
+.accordion-leaf.active {
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--accent-light);
+  font-weight: 600;
+}
+
+/* ── Point décoratif devant chaque feuille ── */
+.leaf-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.45);
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.accordion-leaf:hover .leaf-dot,
+.accordion-leaf.active .leaf-dot {
+  background: var(--accent-light);
+}

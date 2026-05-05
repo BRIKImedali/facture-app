@@ -11,10 +11,94 @@ import './Layout.css';
 const ALL_NAV_ITEMS = [
   { key: 'dashboard', to: '/dashboard',  icon: '📊', label: 'Tableau de bord', permission: null,        end: true  },
   { key: 'clients',   to: '/clients',    icon: '👥', label: 'Clients',          permission: 'CLIENTS',   end: false },
-  { key: 'produits',  to: '/produits',   icon: '📦', label: 'Produits',         permission: 'PRODUITS',  end: false },
   { key: 'factures',  to: '/factures',   icon: '🧾', label: 'Factures',         permission: 'FACTURES',  end: false },
 ];
 
+// ─── Accordion definition for "Produits" ─────────────────────────────────────
+const PRODUITS_ACCORDION = {
+  key: 'produits',
+  icon: '📦',
+  label: 'Produits',
+  permission: 'PRODUITS',
+  children: [
+    // ── Lien direct vers le catalogue produits ──────────────────────────────
+    { key: 'produit-catalogue', to: '/produits', label: '📋 Catalogue produits', end: true },
+
+    {
+      key: 'stock',
+      icon: '🗄️',
+      label: 'Stock',
+      children: [
+        { key: 'stock-liste', to: '/stock', label: 'Liste des stocks', end: true },
+      ],
+    },
+    {
+      key: 'emplacement',
+      icon: '📍',
+      label: 'Emplacement',
+      children: [
+        { key: 'empl-zones', to: '/emplacement', label: 'Zone / Rayon / Étagère', end: true },
+      ],
+    },
+    {
+      key: 'site',
+      icon: '🏭',
+      label: 'Site',
+      children: [
+        { key: 'site-liste', to: '/site', label: 'Liste des sites', end: true },
+      ],
+    },
+  ],
+};
+
+// ─── Recursive accordion item component ──────────────────────────────────────
+const AccordionGroup = ({ group, depth = 1, closeSidebar }) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className={`accordion-group depth-${depth}`}>
+      <button
+        className={`accordion-trigger depth-${depth}`}
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+      >
+        {group.icon && <span className="nav-icon">{group.icon}</span>}
+        <span className="accordion-label">{group.label}</span>
+        <span className={`accordion-chevron ${open ? 'open' : ''}`}>›</span>
+      </button>
+
+      <div className={`accordion-body ${open ? 'accordion-body--open' : ''}`}>
+        <div className="accordion-inner">
+          {group.children.map(child =>
+            child.children ? (
+              <AccordionGroup
+                key={child.key}
+                group={child}
+                depth={depth + 1}
+                closeSidebar={closeSidebar}
+              />
+            ) : (
+              <NavLink
+                key={child.key}
+                to={child.to}
+                end={child.end === true}
+                className={({ isActive }) =>
+                  `accordion-leaf ${isActive ? 'active' : ''}`
+                }
+                onClick={closeSidebar}
+              >
+                <span className="leaf-dot" />
+                <span>{child.label}</span>
+              </NavLink>
+            )
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Main Layout ──────────────────────────────────────────────────────────────
 const Layout = () => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -28,17 +112,27 @@ const Layout = () => {
   const closeSidebar = () => setSidebarOpen(false);
 
   // ─── RBAC filtering ────────────────────────────────────────────────────────
+  const isPrivileged = useMemo(() => {
+    if (!user) return false;
+    return user.role === 'SUPER_ADMIN' || user.role === 'ADMIN';
+  }, [user]);
+
+  const showProduits = useMemo(() => {
+    if (!user) return false;
+    if (isPrivileged) return true;
+    const userPerms = Array.isArray(user.permissions) ? user.permissions : [];
+    return userPerms.includes('PRODUITS');
+  }, [user, isPrivileged]);
+
   const visibleNavItems = useMemo(() => {
     if (!user) return [];
-    const isPrivileged = user.role === 'SUPER_ADMIN' || user.role === 'ADMIN';
     const userPerms = Array.isArray(user.permissions) ? user.permissions : [];
-
     return ALL_NAV_ITEMS.filter(item => {
-      if (item.permission === null) return true;          // always show
-      if (isPrivileged) return true;                      // ADMIN & SUPER_ADMIN see all
-      return userPerms.includes(item.permission);         // match permission
+      if (item.permission === null) return true;
+      if (isPrivileged) return true;
+      return userPerms.includes(item.permission);
     });
-  }, [user]);
+  }, [user, isPrivileged]);
 
   // ─── Role label helper ─────────────────────────────────────────────────────
   const roleLabel = () => {
@@ -67,19 +161,46 @@ const Layout = () => {
         </div>
 
         <nav className="sidebar-nav">
-          {/* ── Filtered menu items ── */}
-          {visibleNavItems.map(item => (
-            <NavLink
-              key={item.key}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-              onClick={closeSidebar}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
+          {/* ── Tableau de bord + Clients ── */}
+          {visibleNavItems
+            .filter(item => ['dashboard', 'clients'].includes(item.key))
+            .map(item => (
+              <NavLink
+                key={item.key}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                onClick={closeSidebar}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+
+          {/* ── Produits — accordion multi-niveaux ── */}
+          {showProduits && (
+            <AccordionGroup
+              group={PRODUITS_ACCORDION}
+              depth={1}
+              closeSidebar={closeSidebar}
+            />
+          )}
+
+          {/* ── Factures ── */}
+          {visibleNavItems
+            .filter(item => item.key === 'factures')
+            .map(item => (
+              <NavLink
+                key={item.key}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                onClick={closeSidebar}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
 
           {/* ── Admin panel (ADMIN / SUPER_ADMIN only) ── */}
           {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
@@ -131,4 +252,3 @@ const Layout = () => {
 };
 
 export default Layout;
-

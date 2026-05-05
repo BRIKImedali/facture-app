@@ -18,6 +18,15 @@ import ClientList from './pages/clients/ClientList';
 import ClientForm from './pages/clients/ClientForm';
 import ProduitList from './pages/produits/ProduitList';
 import ProduitForm from './pages/produits/ProduitForm';
+import SitePage        from './pages/produits/SitePage';
+import SiteForm        from './pages/produits/SiteForm';
+import SiteDetail      from './pages/produits/SiteDetail';
+import EmplacementPage from './pages/produits/EmplacementPage';
+import EmplacementForm from './pages/produits/EmplacementForm';
+import EmplacementDetail from './pages/produits/EmplacementDetail';
+import StockPage       from './pages/produits/StockPage';
+import StockForm       from './pages/produits/StockForm';
+import StockDetail     from './pages/produits/StockDetail';
 import FactureList from './pages/factures/FactureList';
 import FactureCreate from './pages/factures/FactureCreate';
 import FactureDetail from './pages/factures/FactureDetail';
@@ -60,10 +69,30 @@ function App() {
             <Route path="/clients/nouveau"                element={<PermissionGuard permissions="CLIENT:CREATE" redirect><ClientForm /></PermissionGuard>} />
             <Route path="/clients/:id/modifier"           element={<PermissionGuard permissions="CLIENT:UPDATE" redirect><ClientForm /></PermissionGuard>} />
             
-            <Route path="/produits"                       element={<PermissionGuard permissions="PRODUIT:READ" redirect><ProduitList /></PermissionGuard>} />
-            <Route path="/produits/nouveau"               element={<PermissionGuard permissions="PRODUIT:CREATE" redirect><ProduitForm /></PermissionGuard>} />
-            <Route path="/produits/:id/modifier"          element={<PermissionGuard permissions="PRODUIT:UPDATE" redirect><ProduitForm /></PermissionGuard>} />
-            
+            <Route path="/produits"                            element={<PermissionGuard permissions="PRODUIT:READ" redirect><ProduitList /></PermissionGuard>} />
+            <Route path="/produits/nouveau"                    element={<PermissionGuard permissions="PRODUIT:CREATE" redirect><ProduitForm /></PermissionGuard>} />
+            <Route path="/produits/:id/modifier"               element={<PermissionGuard permissions="PRODUIT:UPDATE" redirect><ProduitForm /></PermissionGuard>} />
+
+            {/* ── Sous-modules Produits : Stock / Emplacement / Site ── */}
+            {/* STOCK */}
+            <Route path="/stock"               element={<PermissionGuard permissions="PRODUIT:READ"   redirect><StockPage /></PermissionGuard>} />
+            <Route path="/stock/create"         element={<PermissionGuard permissions="PRODUIT:CREATE" redirect><StockForm /></PermissionGuard>} />
+            <Route path="/stock/edit/:id"       element={<PermissionGuard permissions="PRODUIT:UPDATE" redirect><StockForm /></PermissionGuard>} />
+            <Route path="/stock/:id"            element={<PermissionGuard permissions="PRODUIT:READ"   redirect><StockDetail /></PermissionGuard>} />
+
+            {/* EMPLACEMENT */}
+            <Route path="/emplacement"          element={<PermissionGuard permissions="PRODUIT:READ"   redirect><EmplacementPage /></PermissionGuard>} />
+            <Route path="/emplacement/create"   element={<PermissionGuard permissions="PRODUIT:CREATE" redirect><EmplacementForm /></PermissionGuard>} />
+            <Route path="/emplacement/edit/:id" element={<PermissionGuard permissions="PRODUIT:UPDATE" redirect><EmplacementForm /></PermissionGuard>} />
+            <Route path="/emplacement/:id"      element={<PermissionGuard permissions="PRODUIT:READ"   redirect><EmplacementDetail /></PermissionGuard>} />
+
+            {/* SITE */}
+            <Route path="/site"                 element={<PermissionGuard permissions="PRODUIT:READ"   redirect><SitePage /></PermissionGuard>} />
+            <Route path="/site/create"          element={<PermissionGuard permissions="PRODUIT:CREATE" redirect><SiteForm /></PermissionGuard>} />
+            <Route path="/site/edit/:id"        element={<PermissionGuard permissions="PRODUIT:UPDATE" redirect><SiteForm /></PermissionGuard>} />
+            <Route path="/site/:id"             element={<PermissionGuard permissions="PRODUIT:READ"   redirect><SiteDetail /></PermissionGuard>} />
+
+
             <Route path="/factures"                       element={<PermissionGuard permissions="FACTURE:READ" redirect><FactureList /></PermissionGuard>} />
             <Route path="/factures/nouvelle"              element={<PermissionGuard permissions="FACTURE:CREATE" redirect><FactureCreate /></PermissionGuard>} />
             <Route path="/factures/:id"                   element={<PermissionGuard permissions="FACTURE:READ" redirect><FactureDetail /></PermissionGuard>} />

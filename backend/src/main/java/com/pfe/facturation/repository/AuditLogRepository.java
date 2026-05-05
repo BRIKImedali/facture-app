@@ -20,13 +20,18 @@ import java.util.List;
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
     /** Logs d'audit paginés avec filtres multiples */
-    @Query("SELECT al FROM AuditLog al WHERE " +
+    @Query(value = "SELECT al FROM AuditLog al WHERE " +
            "(:username IS NULL OR LOWER(al.username) LIKE LOWER(CONCAT('%', :username, '%'))) AND " +
            "(:actionType IS NULL OR al.actionType = :actionType) AND " +
            "(:entityType IS NULL OR al.entityType = :entityType) AND " +
            "(:startDate IS NULL OR al.createdAt >= :startDate) AND " +
-           "(:endDate IS NULL OR al.createdAt <= :endDate) " +
-           "ORDER BY al.createdAt DESC")
+           "(:endDate IS NULL OR al.createdAt <= :endDate)",
+           countQuery = "SELECT COUNT(al) FROM AuditLog al WHERE " +
+           "(:username IS NULL OR LOWER(al.username) LIKE LOWER(CONCAT('%', :username, '%'))) AND " +
+           "(:actionType IS NULL OR al.actionType = :actionType) AND " +
+           "(:entityType IS NULL OR al.entityType = :entityType) AND " +
+           "(:startDate IS NULL OR al.createdAt >= :startDate) AND " +
+           "(:endDate IS NULL OR al.createdAt <= :endDate)")
     Page<AuditLog> findWithFilters(
         @Param("username") String username,
         @Param("actionType") String actionType,

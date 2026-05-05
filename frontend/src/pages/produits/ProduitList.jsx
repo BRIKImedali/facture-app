@@ -54,7 +54,7 @@ const ProduitList = () => {
           <h1 className="page-title">📦 Produits & Services</h1>
           <p className="page-subtitle">{produits.length} produit(s) dans le catalogue</p>
         </div>
-        {user?.role === 'ADMIN' && (
+        {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
           <Link to="/produits/nouveau" className="btn btn-primary">✚ Nouveau produit</Link>
         )}
       </div>
@@ -78,7 +78,7 @@ const ProduitList = () => {
             <div className="empty-icon">📦</div>
             <h3>Aucun produit</h3>
             <p>Ajoutez vos produits et services.</p>
-            {user?.role === 'ADMIN' && (
+            {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
               <Link to="/produits/nouveau" className="btn btn-primary">Ajouter un produit</Link>
             )}
           </div>
@@ -107,7 +107,7 @@ const ProduitList = () => {
                     <span className={`badge ${p.actif ? 'badge-payee' : 'badge-annulee'}`}>{p.actif ? '✓ Actif' : '✗ Inactif'}</span>
                   </td>
                   <td>
-                    {user?.role === 'ADMIN' ? (
+                    {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') ? (
                       <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
                         <button className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
                           onClick={() => navigate(`/produits/${p.id}/modifier`)}>✏️</button>
