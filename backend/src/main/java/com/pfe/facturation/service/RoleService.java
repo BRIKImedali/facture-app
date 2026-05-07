@@ -181,6 +181,10 @@ public class RoleService {
             {"CLIENT", "READ", "Voir les clients"},
             {"CLIENT", "UPDATE", "Modifier des clients"},
             {"CLIENT", "DELETE", "Supprimer des clients"},
+            {"VENDEUR", "CREATE", "Créer des vendeurs"},
+            {"VENDEUR", "READ", "Voir les vendeurs"},
+            {"VENDEUR", "UPDATE", "Modifier des vendeurs"},
+            {"VENDEUR", "DELETE", "Supprimer des vendeurs"},
             {"PRODUIT", "CREATE", "Créer des produits"},
             {"PRODUIT", "READ", "Voir les produits"},
             {"PRODUIT", "UPDATE", "Modifier des produits"},
@@ -201,6 +205,16 @@ public class RoleService {
             {"CATEGORIE", "READ", "Voir les catégories"},
             {"CATEGORIE", "UPDATE", "Modifier des catégories"},
             {"CATEGORIE", "DELETE", "Supprimer des catégories"},
+            {"COMMANDE", "CREATE", "Créer des commandes"},
+            {"COMMANDE", "READ", "Voir les commandes"},
+            {"COMMANDE", "UPDATE", "Modifier des commandes"},
+            {"COMMANDE", "DELETE", "Supprimer des commandes"},
+            {"COMMANDE", "APPROVE", "Approuver des commandes"},
+            {"DEVIS", "CREATE", "Créer des devis"},
+            {"DEVIS", "READ", "Voir les devis"},
+            {"DEVIS", "UPDATE", "Modifier des devis"},
+            {"DEVIS", "DELETE", "Supprimer des devis"},
+            {"DEVIS", "EXPORT", "Exporter des devis"},
             {"SYSTEM", "CONFIG", "Configurer le système (admin)"},
             {"SYSTEM", "AUDIT", "Voir les logs d'audit"},
         };
@@ -229,18 +243,23 @@ public class RoleService {
         createDefaultRole("ADMIN", "Administrateur — accès complet", true,
             new HashSet<>(allPerms));
 
-        // MANAGER — CRUD factures, clients, produits
+        // MANAGER — CRUD factures, clients, produits, commandes, devis
         Set<Permission> managerPerms = new HashSet<>(permissionRepository.findByEntity("FACTURE"));
         managerPerms.addAll(permissionRepository.findByEntity("CLIENT"));
+        managerPerms.addAll(permissionRepository.findByEntity("VENDEUR"));
         managerPerms.addAll(permissionRepository.findByEntity("PRODUIT"));
-        createDefaultRole("MANAGER", "Manager — gestion des factures, clients et produits", true, managerPerms);
+        managerPerms.addAll(permissionRepository.findByEntity("COMMANDE"));
+        managerPerms.addAll(permissionRepository.findByEntity("DEVIS"));
+        createDefaultRole("MANAGER", "Manager — gestion des factures, clients, vendeurs, produits, commandes et devis", true, managerPerms);
 
-        // USER — READ + CREATE factures
+        // USER — READ + CREATE factures, devis
         Set<Permission> userPerms = new HashSet<>();
         permissionRepository.findByAction("READ").forEach(userPerms::add);
         permissionRepository.findByEntityAndAction("FACTURE", "CREATE")
             .ifPresent(userPerms::add);
-        createDefaultRole("USER", "Utilisateur standard — lecture + création de factures", true, userPerms);
+        permissionRepository.findByEntityAndAction("DEVIS", "CREATE")
+            .ifPresent(userPerms::add);
+        createDefaultRole("USER", "Utilisateur standard — lecture + création de factures et devis", true, userPerms);
 
         // VIEWER — lecture seule
         Set<Permission> viewerPerms = new HashSet<>(permissionRepository.findByAction("READ"));

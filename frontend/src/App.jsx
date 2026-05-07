@@ -16,6 +16,8 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import ClientList from './pages/clients/ClientList';
 import ClientForm from './pages/clients/ClientForm';
+import VendeurList from './pages/vendeurs/VendeurList';
+import VendeurForm from './pages/vendeurs/VendeurForm';
 import ProduitList from './pages/produits/ProduitList';
 import ProduitForm from './pages/produits/ProduitForm';
 import SitePage        from './pages/produits/SitePage';
@@ -41,6 +43,8 @@ import ErpConfig from './components/admin/erp/ErpConfig';
 import AuditLog from './components/admin/audit/AuditLog';
 import UnitesPage from './pages/admin/UnitesPage';
 import CategoriesClientsPage from './pages/admin/CategoriesClientsPage';
+import CommandeList from './pages/commandes/CommandeList';
+import DevisList from './pages/devis/DevisList';
 
 function App() {
   return (
@@ -68,6 +72,11 @@ function App() {
             <Route path="/clients"                        element={<PermissionGuard permissions="CLIENT:READ" redirect><ClientList /></PermissionGuard>} />
             <Route path="/clients/nouveau"                element={<PermissionGuard permissions="CLIENT:CREATE" redirect><ClientForm /></PermissionGuard>} />
             <Route path="/clients/:id/modifier"           element={<PermissionGuard permissions="CLIENT:UPDATE" redirect><ClientForm /></PermissionGuard>} />
+
+            {/* ── Sous-module Vendeurs ── */}
+            <Route path="/vendeurs"                       element={<PermissionGuard permissions="CLIENT:READ" redirect><VendeurList /></PermissionGuard>} />
+            <Route path="/vendeurs/nouveau"               element={<PermissionGuard permissions="CLIENT:CREATE" redirect><VendeurForm /></PermissionGuard>} />
+            <Route path="/vendeurs/:id/modifier"          element={<PermissionGuard permissions="CLIENT:UPDATE" redirect><VendeurForm /></PermissionGuard>} />
             
             <Route path="/produits"                            element={<PermissionGuard permissions="PRODUIT:READ" redirect><ProduitList /></PermissionGuard>} />
             <Route path="/produits/nouveau"                    element={<PermissionGuard permissions="PRODUIT:CREATE" redirect><ProduitForm /></PermissionGuard>} />
@@ -93,9 +102,16 @@ function App() {
             <Route path="/site/:id"             element={<PermissionGuard permissions="PRODUIT:READ"   redirect><SiteDetail /></PermissionGuard>} />
 
 
+            <Route path="/commandes"                      element={<PermissionGuard permissions="COMMANDE:READ" redirect><CommandeList /></PermissionGuard>} />
+            <Route path="/devis"                          element={<PermissionGuard permissions="DEVIS:READ" redirect><DevisList /></PermissionGuard>} />
+
             <Route path="/factures"                       element={<PermissionGuard permissions="FACTURE:READ" redirect><FactureList /></PermissionGuard>} />
             <Route path="/factures/nouvelle"              element={<PermissionGuard permissions="FACTURE:CREATE" redirect><FactureCreate /></PermissionGuard>} />
             <Route path="/factures/:id"                   element={<PermissionGuard permissions="FACTURE:READ" redirect><FactureDetail /></PermissionGuard>} />
+
+            {/* ── Unités & Catégories (sous Layout principal) ── */}
+            <Route path="/unites"              element={<PermissionGuard permissions="UNITE:READ" redirect><UnitesPage /></PermissionGuard>} />
+            <Route path="/categories-clients" element={<PermissionGuard permissions="CATEGORIE:READ" redirect><CategoriesClientsPage /></PermissionGuard>} />
           </Route>
 
           {/* ====================================================
@@ -126,9 +142,7 @@ function App() {
             {/* Configuration base de données */}
             <Route path="database" element={<DatabaseConfig />} />
 
-            {/* Unités & Catégories */}
-            <Route path="unites" element={<PermissionGuard permissions="UNITE:READ"><UnitesPage /></PermissionGuard>} />
-            <Route path="categories-clients" element={<PermissionGuard permissions="CATEGORIE:READ"><CategoriesClientsPage /></PermissionGuard>} />
+
 
             {/* Intégration ERP */}
             <Route path="erp"      element={<ErpConfig />} />

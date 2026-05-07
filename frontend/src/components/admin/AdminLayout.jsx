@@ -9,8 +9,6 @@ const NAV_ITEMS = [
   { path: '/admin',          label: 'nav.dashboard', icon: '📊', exact: true },
   { path: '/admin/users',    label: 'nav.users',     icon: '👥' },
   { path: '/admin/roles',    label: 'nav.roles',     icon: '🔐' },
-  { path: '/admin/unites',   label: 'Unités',        icon: '📏' },
-  { path: '/admin/categories-clients', label: 'Catégories', icon: '🏷️' },
   { path: '/admin/database', label: 'nav.database',  icon: '🗄️' },
   { path: '/admin/erp',      label: 'nav.erp',       icon: '🔗' },
   { path: '/admin/audit',    label: 'nav.audit',     icon: '📋' },
@@ -72,10 +70,6 @@ const AdminLayout = () => {
         <nav className="sidebar-nav">
           {!collapsed && <div className="sidebar-section-title">Menu</div>}
           {NAV_ITEMS.map(item => {
-            // Filtrer l'affichage selon les permissions pour les nouveaux menus
-            const userPerms = user.permissions || [];
-            if (item.path === '/admin/unites' && !userPerms.includes('UNITE:READ') && user.role !== 'ADMIN') return null;
-            if (item.path === '/admin/categories-clients' && !userPerms.includes('CATEGORIE:READ') && user.role !== 'ADMIN') return null;
 
             return (
               <NavLink

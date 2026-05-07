@@ -1,5 +1,5 @@
-import React, { useState, useContext, useMemo } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import React, { useState, useContext, useMemo, useEffect } from 'react';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import ChatAssistant from './ChatAssistant';
 import './Layout.css';
@@ -9,10 +9,76 @@ import './Layout.css';
 // permission: 'X'   → visible only when user.permissions includes 'X'
 //                     (SUPER_ADMIN bypasses all permission checks)
 const ALL_NAV_ITEMS = [
-  { key: 'dashboard', to: '/dashboard',  icon: '📊', label: 'Tableau de bord', permission: null,        end: true  },
-  { key: 'clients',   to: '/clients',    icon: '👥', label: 'Clients',          permission: 'CLIENTS',   end: false },
-  { key: 'factures',  to: '/factures',   icon: '🧾', label: 'Factures',         permission: 'FACTURES',  end: false },
+  { key: 'dashboard', to: '/dashboard',  icon: '📊', label: 'Tableau de bord', permission: null, end: true },
 ];
+
+// ─── Accordion definition for "Contacts" (Clients, Vendeurs, Catégories) ─────
+const CONTACTS_ACCORDION = {
+  key: 'contacts',
+  icon: '👥',
+  label: 'Contacts',
+  permission: 'CLIENTS',
+  children: [
+    {
+      key: 'clients-group',
+      icon: '🏢',
+      label: 'Clients',
+      children: [
+        { key: 'client-liste', to: '/clients', label: 'Liste des clients', end: true },
+      ],
+    },
+    {
+      key: 'vendeurs-group',
+      icon: '🧑‍💼',
+      label: 'Vendeurs',
+      children: [
+        { key: 'vendeur-liste', to: '/vendeurs', label: 'Liste des vendeurs', end: true },
+      ],
+    },
+    {
+      key: 'categories-group',
+      icon: '🏷️',
+      label: 'Catégories',
+      children: [
+        { key: 'categorie-liste', to: '/categories-clients', label: 'Catégories', end: true },
+      ],
+    },
+  ],
+};
+
+// ─── Accordion definition for "Commerce" ─────────────────────────────────────
+const COMMERCE_ACCORDION = {
+  key: 'commerce',
+  icon: '💼',
+  label: 'Commerce',
+  permission: 'FACTURES',
+  children: [
+    {
+      key: 'commandes-group',
+      icon: '🛍️',
+      label: 'Commandes',
+      children: [
+        { key: 'commande-liste', to: '/commandes', label: 'Liste des commandes', end: true },
+      ],
+    },
+    {
+      key: 'devis-group',
+      icon: '📄',
+      label: 'Devis',
+      children: [
+        { key: 'devis-liste', to: '/devis', label: 'Liste des devis', end: true },
+      ],
+    },
+    {
+      key: 'factures-group',
+      icon: '🧾',
+      label: 'Factures',
+      children: [
+        { key: 'facture-liste', to: '/factures', label: 'Liste des factures', end: true },
+      ],
+    },
+  ],
+};
 
 // ─── Accordion definition for "Produits" ─────────────────────────────────────
 const PRODUITS_ACCORDION = {
@@ -48,12 +114,38 @@ const PRODUITS_ACCORDION = {
         { key: 'site-liste', to: '/site', label: 'Liste des sites', end: true },
       ],
     },
+    {
+      key: 'unite',
+      icon: '📏',
+      label: 'Unités',
+      children: [
+        { key: 'unite-liste', to: '/unites', label: 'Unités de mesure', end: true },
+      ],
+    },
   ],
+};
+
+// ─── Helper to check if a group contains the active path ─────────────────────
+const groupContainsPath = (group, pathname) => {
+  if (group.to && (group.end ? pathname === group.to : pathname.startsWith(group.to))) {
+    return true;
+  }
+  if (group.children) {
+    return group.children.some(child => groupContainsPath(child, pathname));
+  }
+  return false;
 };
 
 // ─── Recursive accordion item component ──────────────────────────────────────
 const AccordionGroup = ({ group, depth = 1, closeSidebar }) => {
   const [open, setOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (groupContainsPath(group, location.pathname)) {
+      setOpen(true);
+    }
+  }, [location.pathname, group]);
 
   return (
     <div className={`accordion-group depth-${depth}`}>
@@ -124,6 +216,22 @@ const Layout = () => {
     return userPerms.includes('PRODUITS');
   }, [user, isPrivileged]);
 
+  const showContacts = useMemo(() => {
+    if (!user) return false;
+    if (isPrivileged) return true;
+    const userPerms = Array.isArray(user.permissions) ? user.permissions : [];
+    // Assume if the user has CLIENTS permission, they can see the Contacts accordion
+    return userPerms.includes('CLIENTS');
+  }, [user, isPrivileged]);
+
+  const showCommerce = useMemo(() => {
+    if (!user) return false;
+    if (isPrivileged) return true;
+    const userPerms = Array.isArray(user.permissions) ? user.permissions : [];
+    // Assume if the user has FACTURES permission, they can see the Commerce accordion
+    return userPerms.includes('FACTURES');
+  }, [user, isPrivileged]);
+
   const visibleNavItems = useMemo(() => {
     if (!user) return [];
     const userPerms = Array.isArray(user.permissions) ? user.permissions : [];
@@ -161,9 +269,9 @@ const Layout = () => {
         </div>
 
         <nav className="sidebar-nav">
-          {/* ── Tableau de bord + Clients ── */}
+          {/* ── Tableau de bord ── */}
           {visibleNavItems
-            .filter(item => ['dashboard', 'clients'].includes(item.key))
+            .filter(item => item.key === 'dashboard')
             .map(item => (
               <NavLink
                 key={item.key}
@@ -176,6 +284,15 @@ const Layout = () => {
                 <span>{item.label}</span>
               </NavLink>
             ))}
+
+          {/* ── Contacts — accordion multi-niveaux ── */}
+          {showContacts && (
+            <AccordionGroup
+              group={CONTACTS_ACCORDION}
+              depth={1}
+              closeSidebar={closeSidebar}
+            />
+          )}
 
           {/* ── Produits — accordion multi-niveaux ── */}
           {showProduits && (
@@ -186,21 +303,16 @@ const Layout = () => {
             />
           )}
 
-          {/* ── Factures ── */}
-          {visibleNavItems
-            .filter(item => item.key === 'factures')
-            .map(item => (
-              <NavLink
-                key={item.key}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                onClick={closeSidebar}
-              >
-                <span className="nav-icon">{item.icon}</span>
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
+          {/* ── Commerce — accordion multi-niveaux ── */}
+          {showCommerce && (
+            <AccordionGroup
+              group={COMMERCE_ACCORDION}
+              depth={1}
+              closeSidebar={closeSidebar}
+            />
+          )}
+
+
 
           {/* ── Admin panel (ADMIN / SUPER_ADMIN only) ── */}
           {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
