@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { roleService, permissionService } from '../../../services/adminService';
 import toast from 'react-hot-toast';
+import './RoleManagement.css';
 
 /**
  * Interface de gestion des rôles avec matrice de permissions.
