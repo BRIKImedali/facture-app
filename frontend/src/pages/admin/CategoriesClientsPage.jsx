@@ -23,11 +23,14 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import { categorieClientService } from '../../services/categorieClientService';
+import Pagination from '../../components/Pagination';
 
 const CategoriesClientsPage = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   const [openDialog, setOpenDialog] = useState(false);
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [currentCategory, setCurrentCategory] = useState({ nom: '', description: '' });
@@ -107,6 +110,9 @@ const CategoriesClientsPage = () => {
     (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
+  const paginatedCategories = filteredCategories.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -127,7 +133,10 @@ const CategoriesClientsPage = () => {
           variant="outlined"
           placeholder="Rechercher par nom..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
           size="small"
         />
       </Paper>
@@ -137,8 +146,9 @@ const CategoriesClientsPage = () => {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
+        <>
+          <TableContainer component={Paper}>
+            <Table>
             <TableHead sx={{ bgcolor: '#f8fafc' }}>
               <TableRow>
                 <TableCell><b>ID</b></TableCell>
@@ -148,7 +158,7 @@ const CategoriesClientsPage = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredCategories.map((category) => (
+              {paginatedCategories.map((category) => (
                 <TableRow key={category.id} hover>
                   <TableCell>{category.id}</TableCell>
                   <TableCell>{category.nom}</TableCell>
@@ -175,6 +185,18 @@ const CategoriesClientsPage = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        {filteredCategories.length > 0 && (
+          <Box sx={{ mt: 2 }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredCategories.length}
+              pageSize={itemsPerPage}
+            />
+          </Box>
+        )}
+        </>
       )}
 
       {/* Dialog Ajout/Modification */}

@@ -9,7 +9,7 @@ import './Layout.css';
 // permission: 'X'   → visible only when user.permissions includes 'X'
 //                     (SUPER_ADMIN bypasses all permission checks)
 const ALL_NAV_ITEMS = [
-  { key: 'dashboard', to: '/dashboard',  icon: '📊', label: 'Tableau de bord', permission: null, end: true },
+  { key: 'dashboard', to: '/dashboard', icon: '📊', label: 'Tableau de bord', permission: null, end: true },
 ];
 
 // ─── Accordion definition for "Contacts" (Clients, Vendeurs, Catégories) ─────
@@ -29,7 +29,7 @@ const CONTACTS_ACCORDION = {
     },
     {
       key: 'vendeurs-group',
-      icon: '🧑‍💼',
+      icon: '🧑',
       label: 'Vendeurs',
       children: [
         { key: 'vendeur-liste', to: '/vendeurs', label: 'Liste des vendeurs', end: true },
@@ -245,9 +245,9 @@ const Layout = () => {
   // ─── Role label helper ─────────────────────────────────────────────────────
   const roleLabel = () => {
     switch (user?.role) {
-      case 'SUPER_ADMIN':  return '👑 Super Admin';
-      case 'ADMIN':        return '🔑 Administrateur';
-      default:             return '👤 Utilisateur';
+      case 'SUPER_ADMIN': return '👑 Super Admin';
+      case 'ADMIN': return '🔑 Administrateur';
+      default: return '👤 Utilisateur';
     }
   };
 

@@ -44,7 +44,9 @@ import AuditLog from './components/admin/audit/AuditLog';
 import UnitesPage from './pages/admin/UnitesPage';
 import CategoriesClientsPage from './pages/admin/CategoriesClientsPage';
 import CommandeList from './pages/commandes/CommandeList';
+import CommandeCreate from './pages/commandes/CommandeCreate';
 import DevisList from './pages/devis/DevisList';
+import DevisCreate from './pages/devis/DevisCreate';
 
 function App() {
   return (
@@ -103,7 +105,10 @@ function App() {
 
 
             <Route path="/commandes"                      element={<PermissionGuard permissions="COMMANDE:READ" redirect><CommandeList /></PermissionGuard>} />
+            <Route path="/commandes/nouvelle"             element={<PermissionGuard permissions="COMMANDE:CREATE" redirect><CommandeCreate /></PermissionGuard>} />
+
             <Route path="/devis"                          element={<PermissionGuard permissions="DEVIS:READ" redirect><DevisList /></PermissionGuard>} />
+            <Route path="/devis/nouveau"                  element={<PermissionGuard permissions="DEVIS:CREATE" redirect><DevisCreate /></PermissionGuard>} />
 
             <Route path="/factures"                       element={<PermissionGuard permissions="FACTURE:READ" redirect><FactureList /></PermissionGuard>} />
             <Route path="/factures/nouvelle"              element={<PermissionGuard permissions="FACTURE:CREATE" redirect><FactureCreate /></PermissionGuard>} />

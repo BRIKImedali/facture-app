@@ -5,6 +5,7 @@ import com.pfe.facturation.model.AuditLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -17,29 +18,7 @@ import java.util.List;
  * Fournit des requêtes de filtrage avancé pour l'interface d'audit.
  */
 @Repository
-public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
-
-    /** Logs d'audit paginés avec filtres multiples */
-    @Query(value = "SELECT al FROM AuditLog al WHERE " +
-           "(:username IS NULL OR LOWER(al.username) LIKE LOWER(CONCAT('%', :username, '%'))) AND " +
-           "(:actionType IS NULL OR al.actionType = :actionType) AND " +
-           "(:entityType IS NULL OR al.entityType = :entityType) AND " +
-           "(:startDate IS NULL OR al.createdAt >= :startDate) AND " +
-           "(:endDate IS NULL OR al.createdAt <= :endDate)",
-           countQuery = "SELECT COUNT(al) FROM AuditLog al WHERE " +
-           "(:username IS NULL OR LOWER(al.username) LIKE LOWER(CONCAT('%', :username, '%'))) AND " +
-           "(:actionType IS NULL OR al.actionType = :actionType) AND " +
-           "(:entityType IS NULL OR al.entityType = :entityType) AND " +
-           "(:startDate IS NULL OR al.createdAt >= :startDate) AND " +
-           "(:endDate IS NULL OR al.createdAt <= :endDate)")
-    Page<AuditLog> findWithFilters(
-        @Param("username") String username,
-        @Param("actionType") String actionType,
-        @Param("entityType") String entityType,
-        @Param("startDate") LocalDateTime startDate,
-        @Param("endDate") LocalDateTime endDate,
-        Pageable pageable
-    );
+public interface AuditLogRepository extends JpaRepository<AuditLog, Long>, JpaSpecificationExecutor<AuditLog> {
 
     /** Logs d'audit pour un utilisateur spécifique */
     Page<AuditLog> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);

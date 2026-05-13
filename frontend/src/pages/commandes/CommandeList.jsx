@@ -1,114 +1,200 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import {
+  Box, Button, Typography, Paper, Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, IconButton, Tooltip, CircularProgress,
+  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, Chip
+} from '@mui/material';
+import { Add as AddIcon, Visibility as VisibilityIcon, Delete as DeleteIcon } from '@mui/icons-material';
+
 import { commandeService } from '../../services/commandeService';
+import Pagination from '../../components/Pagination';
 
 const STATUTS = ['', 'EN_ATTENTE', 'VALIDEE', 'LIVREE', 'ANNULEE'];
 
 const CommandeList = () => {
   const [commandes, setCommandes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [selectedStatut, setSelectedStatut] = useState('');
-  const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
-  const fetchCommandes = async (s = selectedStatut) => {
-    try {
-      const res = await commandeService.getAll(s || null);
-      setCommandes(res.data);
-    } catch { setError('Erreur lors du chargement des commandes.'); }
-    finally { setLoading(false); }
-  };
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [commandeToDelete, setCommandeToDelete] = useState(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  const navigate = useNavigate();
 
   useEffect(() => { fetchCommandes(); }, []);
 
+  const fetchCommandes = async (s = selectedStatut) => {
+    setLoading(true);
+    try {
+      const res = await commandeService.getAll(s || null);
+      setCommandes(res.data);
+    } catch {
+      showSnackbar('Erreur lors du chargement des commandes.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleStatutChange = (s) => {
     setSelectedStatut(s);
-    setLoading(true);
+    setCurrentPage(1);
     fetchCommandes(s);
   };
 
-  const handleDelete = async (id, reference) => {
-    if (!window.confirm(`Supprimer la commande ${reference} ?`)) return;
-    try {
-      await commandeService.delete(id);
-      setCommandes(c => c.filter(x => x.id !== id));
-    } catch (err) { setError(err.response?.data?.message || 'Suppression impossible.'); }
+  const confirmDelete = (commande) => {
+    setCommandeToDelete(commande);
+    setOpenConfirmDialog(true);
   };
 
-  const statutBadge = (s) => {
-    const map = { EN_ATTENTE: 'brouillon', VALIDEE: 'envoyee', LIVREE: 'payee', ANNULEE: 'annulee' };
-    return <span className={`badge badge-${map[s] || ''}`}>{s}</span>;
+  const handleDelete = async () => {
+    try {
+      await commandeService.delete(commandeToDelete.id);
+      showSnackbar('Commande supprimée', 'success');
+      setCommandes(commandes.filter(c => c.id !== commandeToDelete.id));
+      setOpenConfirmDialog(false);
+    } catch (err) {
+      showSnackbar(err.response?.data?.message || 'Suppression impossible.', 'error');
+      setOpenConfirmDialog(false);
+    }
   };
+
+  const showSnackbar = (message, severity) => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const getStatutColor = (statut) => {
+    switch (statut) {
+      case 'LIVREE': return 'success';
+      case 'VALIDEE': return 'info';
+      case 'ANNULEE': return 'error';
+      case 'EN_ATTENTE': default: return 'warning';
+    }
+  };
+
+  const totalPages = Math.ceil(commandes.length / itemsPerPage);
+  const paginatedCommandes = commandes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">📦 Commandes</h1>
-          <p className="page-subtitle">{commandes.length} commande(s)</p>
-        </div>
-        <Link to="/commandes/nouvelle" className="btn btn-primary">✚ Nouvelle commande</Link>
-      </div>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Gestion des Commandes</Typography>
+        <Button 
+          variant="contained" 
+          startIcon={<AddIcon />} 
+          onClick={() => navigate('/commandes/nouvelle')}
+          sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' } }}
+        >
+          Nouvelle commande
+        </Button>
+      </Box>
 
-      {error && <div className="alert alert-danger">{error}</div>}
-
-      {/* Filtre par statut */}
-      <div className="card" style={{ marginBottom: '1.5rem', padding: '1rem', display: 'flex', gap: '0.5rem' }}>
+      <Box sx={{ mb: 3, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
         {STATUTS.map(s => (
-          <button key={s} onClick={() => handleStatutChange(s)}
-            className={`btn ${selectedStatut === s ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '0.4rem 0.9rem', fontSize: '0.82rem' }}>
+          <Button 
+            key={s} 
+            variant={selectedStatut === s ? 'contained' : 'outlined'}
+            onClick={() => handleStatutChange(s)}
+            size="small"
+            sx={{ borderRadius: 2 }}
+          >
             {s || 'Toutes'}
-          </button>
+          </Button>
         ))}
-      </div>
+      </Box>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        {loading ? (
-          <div className="loading">Chargement...</div>
-        ) : commandes.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">📦</div>
-            <h3>Aucune commande</h3>
-            <Link to="/commandes/nouvelle" className="btn btn-primary">Créer la première commande</Link>
-          </div>
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Référence</th>
-                <th>Client</th>
-                <th>Date</th>
-                <th>Total TTC</th>
-                <th>Statut</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {commandes.map(c => (
-                <tr key={c.id}>
-                  <td><strong style={{ color: '#6366f1' }}>{c.reference}</strong></td>
-                  <td>{c.client?.nom}</td>
-                  <td>{c.dateCommande ? new Date(c.dateCommande).toLocaleDateString('fr-FR') : '—'}</td>
-                  <td><strong>{Number(c.totalTTC || 0).toFixed(2)} TND</strong></td>
-                  <td>{statutBadge(c.statut)}</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
-                      <button className="btn btn-secondary" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }}
-                        onClick={() => navigate(`/commandes/${c.id}`)}>👁 Voir</button>
-                      {c.statut !== 'VALIDEE' && c.statut !== 'LIVREE' && c.statut !== 'ANNULEE' && (
-                        <button className="btn btn-danger" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
-                          onClick={() => handleDelete(c.id, c.reference)}>🗑️</button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead sx={{ bgcolor: '#f8fafc' }}>
+                <TableRow>
+                  <TableCell><b>Référence</b></TableCell>
+                  <TableCell><b>Client</b></TableCell>
+                  <TableCell><b>Date</b></TableCell>
+                  <TableCell><b>Total TTC</b></TableCell>
+                  <TableCell><b>Statut</b></TableCell>
+                  <TableCell align="right"><b>Actions</b></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {paginatedCommandes.map((c) => (
+                  <TableRow key={c.id} hover>
+                    <TableCell><Typography variant="body2" sx={{ fontWeight: 'bold', color: '#6366f1' }}>{c.reference}</Typography></TableCell>
+                    <TableCell>{c.client?.nom}</TableCell>
+                    <TableCell>{c.dateCommande ? new Date(c.dateCommande).toLocaleDateString('fr-FR') : '-'}</TableCell>
+                    <TableCell><Typography variant="body2" sx={{ fontWeight: 'bold' }}>{Number(c.totalTTC || 0).toFixed(2)} TND</Typography></TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={c.statut} 
+                        size="small" 
+                        color={getStatutColor(c.statut)}
+                        sx={{ fontWeight: 'bold', fontSize: '0.75rem', height: '24px' }}
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                        <Tooltip title="Voir la commande">
+                          <IconButton color="primary" onClick={() => navigate(`/commandes/${c.id}`)} size="small">
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        {c.statut !== 'VALIDEE' && c.statut !== 'LIVREE' && c.statut !== 'ANNULEE' && (
+                          <Tooltip title="Supprimer">
+                            <IconButton color="error" onClick={() => confirmDelete(c)} size="small">
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {commandes.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center">Aucune commande trouvée</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          
+          {commandes.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={commandes.length}
+                pageSize={itemsPerPage}
+              />
+            </Box>
+          )}
+        </>
+      )}
+
+      <Dialog open={openConfirmDialog} onClose={() => setOpenConfirmDialog(false)}>
+        <DialogTitle>Confirmer la suppression</DialogTitle>
+        <DialogContent>
+          <Typography>Êtes-vous sûr de vouloir supprimer la commande "{commandeToDelete?.reference}" ?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenConfirmDialog(false)} color="inherit">Annuler</Button>
+          <Button onClick={handleDelete} color="error" variant="contained">Supprimer</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar({ ...snackbar, open: false })}>
+        <Alert severity={snackbar.severity} sx={{ width: '100%' }}>{snackbar.message}</Alert>
+      </Snackbar>
+    </Box>
   );
 };
 

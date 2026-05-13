@@ -1,132 +1,233 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import {
+  Box, Button, Typography, Paper, Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, IconButton, Tooltip, TextField, CircularProgress,
+  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, Chip
+} from '@mui/material';
+import { 
+  Edit as EditIcon, 
+  Delete as DeleteIcon, 
+  Add as AddIcon,
+  PlayArrow as PlayIcon,
+  Pause as PauseIcon
+} from '@mui/icons-material';
+
 import { produitService } from '../../services/produitService';
 import { AuthContext } from '../../context/AuthContext';
+import Pagination from '../../components/Pagination';
 
 const ProduitList = () => {
   const [produits, setProduits] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [error, setError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [produitToDelete, setProduitToDelete] = useState(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
+  useEffect(() => { fetchProduits(); }, []);
+
   const fetchProduits = async () => {
+    setLoading(true);
     try {
-      const res = search
-        ? await produitService.search(search)
-        : await produitService.getAll();
+      const res = await produitService.getAll();
       setProduits(res.data);
     } catch {
-      setError('Erreur lors du chargement des produits.');
+      showSnackbar('Erreur lors du chargement des produits.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchProduits(); }, []);
-
-  const handleSearch = (e) => { e.preventDefault(); setLoading(true); fetchProduits(); };
-
   const handleToggleActif = async (p) => {
     try {
       if (p.actif) {
         await produitService.desactiver(p.id);
+        showSnackbar('Produit désactivé', 'success');
       } else {
         await produitService.update(p.id, { ...p, actif: true });
+        showSnackbar('Produit activé', 'success');
       }
       fetchProduits();
-    } catch { setError('Erreur lors de la mise à jour du statut.'); }
+    } catch { 
+      showSnackbar('Erreur lors de la mise à jour du statut.', 'error'); 
+    }
   };
 
-  const handleDelete = async (id, nom) => {
-    if (!window.confirm(`Supprimer "${nom}" définitivement ?`)) return;
-    try {
-      await produitService.delete(id);
-      setProduits(produits.filter(p => p.id !== id));
-    } catch { setError('Impossible de supprimer ce produit.'); }
+  const confirmDelete = (produit) => {
+    setProduitToDelete(produit);
+    setOpenConfirmDialog(true);
   };
+
+  const handleDelete = async () => {
+    try {
+      await produitService.delete(produitToDelete.id);
+      showSnackbar('Produit supprimé avec succès', 'success');
+      setProduits(produits.filter(p => p.id !== produitToDelete.id));
+      setOpenConfirmDialog(false);
+    } catch {
+      showSnackbar('Impossible de supprimer ce produit.', 'error');
+      setOpenConfirmDialog(false);
+    }
+  };
+
+  const showSnackbar = (message, severity) => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const filteredProduits = produits.filter(p => 
+    p.nom.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (p.reference && p.reference.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const totalPages = Math.ceil(filteredProduits.length / itemsPerPage);
+  const paginatedProduits = filteredProduits.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">📦 Produits & Services</h1>
-          <p className="page-subtitle">{produits.length} produit(s) dans le catalogue</p>
-        </div>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Gestion des Produits</Typography>
         {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
-          <Link to="/produits/nouveau" className="btn btn-primary">✚ Nouveau produit</Link>
+          <Button 
+            variant="contained" 
+            startIcon={<AddIcon />} 
+            onClick={() => navigate('/produits/nouveau')}
+            sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' } }}
+          >
+            Nouveau produit
+          </Button>
         )}
-      </div>
+      </Box>
 
-      {error && <div className="alert alert-danger">{error}</div>}
+      <Paper sx={{ mb: 3, p: 2, display: 'flex', alignItems: 'center' }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Rechercher par nom, référence..."
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
+          size="small"
+        />
+      </Paper>
 
-      <div className="card" style={{ marginBottom: '1.5rem', padding: '1rem' }}>
-        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.75rem' }}>
-          <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="🔍 Rechercher un produit..." className="form-control" style={{ maxWidth: 380 }} />
-          <button type="submit" className="btn btn-primary">Rechercher</button>
-          {search && <button type="button" className="btn btn-secondary" onClick={() => { setSearch(''); fetchProduits(); }}>Réinitialiser</button>}
-        </form>
-      </div>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead sx={{ bgcolor: '#f8fafc' }}>
+                <TableRow>
+                  <TableCell><b>Référence</b></TableCell>
+                  <TableCell><b>Nom</b></TableCell>
+                  <TableCell><b>Prix HT</b></TableCell>
+                  <TableCell><b>TVA</b></TableCell>
+                  <TableCell><b>Unité</b></TableCell>
+                  <TableCell><b>Statut</b></TableCell>
+                  <TableCell align="right"><b>Actions</b></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {paginatedProduits.map((p) => (
+                  <TableRow key={p.id} hover sx={{ opacity: p.actif ? 1 : 0.6 }}>
+                    <TableCell>
+                      <Chip label={p.reference || '-'} size="small" sx={{ fontFamily: 'monospace', bgcolor: '#f1f5f9' }} />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#1e293b' }}>{p.nom}</Typography>
+                      {p.description && (
+                        <Typography variant="caption" color="text.secondary">
+                          {p.description.substring(0, 50)}{p.description.length > 50 ? '...' : ''}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell><Typography variant="body2" sx={{ fontWeight: 'bold' }}>{Number(p.prixHT).toFixed(2)} TND</Typography></TableCell>
+                    <TableCell>{p.tauxTva}%</TableCell>
+                    <TableCell>{p.unite?.nom || '-'}</TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={p.actif ? 'Actif' : 'Inactif'} 
+                        size="small" 
+                        color={p.actif ? 'success' : 'default'}
+                        variant={p.actif ? 'filled' : 'outlined'}
+                        sx={{ fontWeight: 'bold', height: '24px' }}
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                          <Tooltip title="Modifier">
+                            <IconButton color="primary" onClick={() => navigate(`/produits/${p.id}/modifier`)} size="small">
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title={p.actif ? "Désactiver" : "Activer"}>
+                            <IconButton color={p.actif ? "warning" : "success"} onClick={() => handleToggleActif(p)} size="small">
+                              {p.actif ? <PauseIcon fontSize="small" /> : <PlayIcon fontSize="small" />}
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Supprimer">
+                            <IconButton color="error" onClick={() => confirmDelete(p)} size="small">
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      ) : (
+                        '-'
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredProduits.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">Aucun produit trouvé</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          
+          {filteredProduits.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filteredProduits.length}
+                pageSize={itemsPerPage}
+              />
+            </Box>
+          )}
+        </>
+      )}
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        {loading ? (
-          <div className="loading">Chargement...</div>
-        ) : produits.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">📦</div>
-            <h3>Aucun produit</h3>
-            <p>Ajoutez vos produits et services.</p>
-            {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
-              <Link to="/produits/nouveau" className="btn btn-primary">Ajouter un produit</Link>
-            )}
-          </div>
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Référence</th>
-                <th>Nom</th>
-                <th>Prix HT</th>
-                <th>TVA</th>
-                <th>Unité</th>
-                <th>Statut</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {produits.map(p => (
-                <tr key={p.id} style={{ opacity: p.actif ? 1 : 0.55 }}>
-                  <td><code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>{p.reference || '—'}</code></td>
-                  <td><strong>{p.nom}</strong>{p.description && <p style={{ margin: 0, fontSize: '0.78rem', color: '#94a3b8' }}>{p.description.substring(0, 60)}{p.description.length > 60 ? '...' : ''}</p>}</td>
-                  <td><strong>{Number(p.prixHT).toFixed(2)} TND</strong></td>
-                  <td>{p.tauxTva}%</td>
-                  <td>{p.unite?.nom || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
-                  <td>
-                    <span className={`badge ${p.actif ? 'badge-payee' : 'badge-annulee'}`}>{p.actif ? '✓ Actif' : '✗ Inactif'}</span>
-                  </td>
-                  <td>
-                    {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') ? (
-                      <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
-                        <button className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
-                          onClick={() => navigate(`/produits/${p.id}/modifier`)}>✏️</button>
-                        <button className={`btn ${p.actif ? 'btn-warning' : 'btn-success'}`} style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
-                          onClick={() => handleToggleActif(p)}>{p.actif ? '⏸' : '▶'}</button>
-                        <button className="btn btn-danger" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
-                          onClick={() => handleDelete(p.id, p.nom)}>🗑️</button>
-                      </div>
-                    ) : (
-                      <div style={{ textAlign: 'right', color: '#cbd5e1' }}>—</div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
+      <Dialog open={openConfirmDialog} onClose={() => setOpenConfirmDialog(false)}>
+        <DialogTitle>Confirmer la suppression</DialogTitle>
+        <DialogContent>
+          <Typography>Êtes-vous sûr de vouloir supprimer le produit "{produitToDelete?.nom}" ?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenConfirmDialog(false)} color="inherit">Annuler</Button>
+          <Button onClick={handleDelete} color="error" variant="contained">Supprimer</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar({ ...snackbar, open: false })}>
+        <Alert severity={snackbar.severity} sx={{ width: '100%' }}>{snackbar.message}</Alert>
+      </Snackbar>
+    </Box>
   );
 };
 

@@ -127,30 +127,33 @@ const ClientForm = () => {
             </div>
 
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label>Catégories</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '10px', border: '1px solid var(--border-color, #e2e8f0)', borderRadius: '6px' }}>
-                {categories.length === 0 ? (
-                  <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Aucune catégorie disponible</span>
-                ) : (
-                  categories.map(cat => (
-                    <label key={cat.id} style={{ 
-                      display: 'flex', alignItems: 'center', gap: '6px', 
-                      background: selectedCategories.includes(cat.id) ? '#eff6ff' : '#f8fafc',
-                      border: `1px solid ${selectedCategories.includes(cat.id) ? '#bfdbfe' : '#e2e8f0'}`,
-                      padding: '4px 10px', borderRadius: '16px', cursor: 'pointer',
-                      fontSize: '0.85rem', transition: 'all 0.2s', margin: 0
-                    }}>
-                      <input 
-                        type="checkbox" 
-                        checked={selectedCategories.includes(cat.id)}
-                        onChange={() => toggleCategory(cat.id)}
-                        style={{ margin: 0 }}
-                      />
+              <label>Catégorie</label>
+              {categories.length === 0 ? (
+                <div className="form-control" style={{ color: '#94a3b8', display: 'flex', alignItems: 'center' }}>
+                  Aucune catégorie disponible
+                </div>
+              ) : (
+                <select
+                  className="form-control"
+                  multiple
+                  size={Math.min(categories.length, 5)}
+                  value={selectedCategories.map(String)}
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.selectedOptions, opt => parseInt(opt.value));
+                    setValue('categorieIds', selected, { shouldDirty: true });
+                  }}
+                  style={{ height: 'auto', padding: '4px' }}
+                >
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>
                       {cat.nom}
-                    </label>
-                  ))
-                )}
-              </div>
+                    </option>
+                  ))}
+                </select>
+              )}
+              <span style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '4px', display: 'block' }}>
+                Maintenez <kbd style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '3px', padding: '0 4px', fontSize: '0.75rem' }}>Ctrl</kbd> pour sélectionner plusieurs catégories
+              </span>
             </div>
           </div>
 

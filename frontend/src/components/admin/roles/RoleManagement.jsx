@@ -219,29 +219,41 @@ const RoleManagement = () => {
       {/* MODAL : Créer/Modifier un rôle */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal modal-xl" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">
-                {editingRole ? `✏️ ${t('roles.edit')} — ${editingRole.name}` : `+ ${t('roles.create')}`}
+          <div className="role-modal" onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="role-modal__header">
+              <h3 className="role-modal__title">
+                {editingRole ? t('roles.edit') : t('roles.create')}
               </h3>
-              <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
+              <button className="role-modal__close" onClick={() => setShowModal(false)}>✕</button>
             </div>
-            <div className="modal-body">
-              {/* Infos du rôle */}
-              <div className="form-grid" style={{ marginBottom: 24 }}>
-                <div className="form-group">
-                  <label className="form-label">{t('roles.name')} <span className="required">*</span></label>
+
+            {/* Body */}
+            <div className="role-modal__body">
+
+              {/* Champs Nom + Description */}
+              <div className="role-modal__fields">
+                <div className="role-modal__field">
+                  <label className="role-modal__label">
+                    Role Identifier (Name) <span className="required">*</span>
+                  </label>
                   <input
-                    className="form-input"
+                    className="role-modal__input"
                     value={formData.name}
                     onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
                     placeholder="Ex: COMPTABLE"
                   />
+                  {formData.name && (
+                    <span className="role-modal__hint">
+                      Will be saved as ROLE_{formData.name.toUpperCase().replace(/\s+/g, '_')}
+                    </span>
+                  )}
                 </div>
-                <div className="form-group">
-                  <label className="form-label">{t('roles.description')}</label>
+                <div className="role-modal__field">
+                  <label className="role-modal__label">Description</label>
                   <input
-                    className="form-input"
+                    className="role-modal__input"
                     value={formData.description}
                     onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
                     placeholder="Description du rôle..."
@@ -249,80 +261,56 @@ const RoleManagement = () => {
                 </div>
               </div>
 
-              {/* Matrice des permissions */}
-              <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-                <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>
-                  {t('roles.permission_matrix')}
-                  <span className="badge badge-primary" style={{ marginLeft: 8 }}>
-                    {selectedPermIds.length} sélectionnée(s)
-                  </span>
-                </h4>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn btn-ghost btn-sm" onClick={selectAll}>
-                    ✅ {t('roles.select_all')}
-                  </button>
-                  <button className="btn btn-ghost btn-sm" onClick={deselectAll}>
-                    ✕ {t('roles.deselect_all')}
-                  </button>
+              {/* Séparateur Assign Permissions */}
+              <div className="role-modal__section-header">
+                <span className="role-modal__section-title">Assign Permissions</span>
+                <div className="role-modal__section-actions">
+                  <button className="role-modal__action-btn" onClick={selectAll}>Select All</button>
+                  <button className="role-modal__action-btn" onClick={deselectAll}>Clear</button>
                 </div>
               </div>
+              <div className="role-modal__divider" />
 
-              <div className="permission-matrix">
-                <table>
-                  <thead>
-                    <tr>
-                      <th style={{ width: 140 }}>{t('roles.entity')}</th>
-                      {['CREATE','READ','UPDATE','DELETE','EXPORT','APPROVE','CONFIG','AUDIT'].map(action => (
-                        <th key={action} style={{ textAlign: 'center', fontSize: 10 }}>{action}</th>
-                      ))}
-                      <th style={{ textAlign: 'center' }}>Tout</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(groupedPermissions).map(([entity, perms]) => {
-                      const entityPermIds = perms.map(p => p.id);
-                      const allSelected = entityPermIds.every(id => selectedPermIds.includes(id));
-                      return (
-                        <tr key={entity}>
-                          <td>
-                            <div className="perm-entity-label">
-                              {entityIcons[entity] || '📌'} {entity}
-                            </div>
-                          </td>
-                          {['CREATE','READ','UPDATE','DELETE','EXPORT','APPROVE','CONFIG','AUDIT'].map(action => {
-                            const perm = perms.find(p => p.action === action);
-                            return (
-                              <td key={action} style={{ textAlign: 'center' }}>
-                                {perm ? (
-                                  <input
-                                    type="checkbox"
-                                    className="perm-checkbox"
-                                    checked={selectedPermIds.includes(perm.id)}
-                                    onChange={() => togglePermission(perm.id)}
-                                  />
-                                ) : (
-                                  <span style={{ color: 'var(--admin-border)' }}>—</span>
-                                )}
-                              </td>
-                            );
-                          })}
-                          <td style={{ textAlign: 'center' }}>
-                            <input
-                              type="checkbox"
-                              className="perm-checkbox"
-                              checked={allSelected}
-                              onChange={() => toggleEntityPermissions(entity)}
-                              title="Sélectionner toutes les permissions de cette entité"
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              {/* Grille de permissions */}
+              <div className="role-modal__perm-grid">
+                {permissions.map(perm => {
+                  const isChecked = selectedPermIds.includes(perm.id);
+                  // Construire un label lisible : "Read Users", "Write Inventory", etc.
+                  const actionLabel = perm.action
+                    ? perm.action.charAt(0).toUpperCase() + perm.action.slice(1).toLowerCase()
+                    : perm.name;
+                  const entityLabel = perm.entity
+                    ? perm.entity.charAt(0).toUpperCase() + perm.entity.slice(1).toLowerCase()
+                    : '';
+                  const label = perm.name || `${actionLabel} ${entityLabel}`;
+
+                  return (
+                    <label
+                      key={perm.id}
+                      className={`role-modal__perm-card ${isChecked ? 'role-modal__perm-card--checked' : ''}`}
+                      onClick={() => togglePermission(perm.id)}
+                    >
+                      <span className={`role-modal__perm-checkbox ${isChecked ? 'role-modal__perm-checkbox--checked' : ''}`}>
+                        {isChecked && (
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </span>
+                      <span className="role-modal__perm-label">{label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              {/* Badge compteur */}
+              <div className="role-modal__counter">
+                <span className="badge badge-primary">{selectedPermIds.length} permission(s) sélectionnée(s)</span>
               </div>
             </div>
-            <div className="modal-footer">
+
+            {/* Footer */}
+            <div className="role-modal__footer">
               <button className="btn btn-ghost" onClick={() => setShowModal(false)}>
                 {t('common.cancel')}
               </button>

@@ -1,16 +1,31 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import {
+  Box, Button, Typography, Paper, Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, IconButton, Tooltip, TextField, CircularProgress,
+  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, Chip,
+  Select, MenuItem, FormControl, InputLabel
+} from '@mui/material';
+import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
+
 import { emplacementService } from '../../services/emplacementService';
-import { siteService }        from '../../services/siteService';
+import { siteService } from '../../services/siteService';
+import Pagination from '../../components/Pagination';
 
 export default function EmplacementPage() {
   const [emplacements, setEmplacements] = useState([]);
-  const [sites,        setSites]        = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [search,       setSearch]       = useState('');
-  const [filterSite,   setFilterSite]   = useState('');
-  const [deleteId,     setDeleteId]     = useState(null);
+  const [sites, setSites] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterSite, setFilterSite] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  const navigate = useNavigate();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -18,81 +33,167 @@ export default function EmplacementPage() {
       const [eR, sR] = await Promise.all([emplacementService.getAll(), siteService.getAll()]);
       setEmplacements(eR.data);
       setSites(sR.data);
-    } catch { toast.error('Impossible de charger les données'); }
-    finally { setLoading(false); }
+    } catch {
+      showSnackbar('Impossible de charger les données', 'error');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   const filtered = emplacements.filter(e => {
-    const text = [e.zone, e.rayon, e.etagere].some(v => v?.toLowerCase().includes(search.toLowerCase()));
-    const site = !filterSite || String(e.siteId) === filterSite;
-    return text && site;
+    const text = [e.zone, e.rayon, e.etagere].some(v => v?.toLowerCase().includes(searchQuery.toLowerCase()));
+    const siteMatch = !filterSite || String(e.siteId) === filterSite;
+    return text && siteMatch;
   });
 
   const confirmDelete = async () => {
-    try { await emplacementService.delete(deleteId); toast.success('Supprimé'); setDeleteId(null); load(); }
-    catch { toast.error('Impossible de supprimer'); }
+    try {
+      await emplacementService.delete(deleteId);
+      showSnackbar('Emplacement supprimé', 'success');
+      setOpenConfirmDialog(false);
+      setDeleteId(null);
+      load();
+    } catch {
+      showSnackbar('Impossible de supprimer', 'error');
+      setOpenConfirmDialog(false);
+    }
   };
 
+  const showSnackbar = (message, severity) => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedEmplacements = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">📍 Emplacements</h1>
-          <p className="page-subtitle">Zone / Rayon / Étagère par site</p>
-        </div>
-        <Link to="/emplacement/create" className="btn btn-primary">+ Nouvel emplacement</Link>
-      </div>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>📍 Emplacements</Typography>
+        <Button 
+          variant="contained" 
+          startIcon={<AddIcon />} 
+          onClick={() => navigate('/emplacement/create')}
+          sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' } }}
+        >
+          Nouvel emplacement
+        </Button>
+      </Box>
 
-      <div className="card" style={{ marginBottom:'1rem', padding:'0.75rem 1rem', display:'flex', gap:'1rem' }}>
-        <input className="form-control" placeholder="Rechercher…" value={search} onChange={e=>setSearch(e.target.value)} style={{flex:2}} />
-        <select className="form-control" value={filterSite} onChange={e=>setFilterSite(e.target.value)} style={{flex:1}}>
-          <option value="">Tous les sites</option>
-          {sites.map(s=><option key={s.id} value={String(s.id)}>{s.nom}</option>)}
-        </select>
-      </div>
+      <Paper sx={{ mb: 3, p: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+        <TextField
+          sx={{ flex: 2, minWidth: '200px' }}
+          variant="outlined"
+          placeholder="Rechercher…"
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
+          size="small"
+        />
+        <FormControl size="small" sx={{ flex: 1, minWidth: '200px' }}>
+          <InputLabel>Filtrer par site</InputLabel>
+          <Select
+            value={filterSite}
+            label="Filtrer par site"
+            onChange={(e) => {
+              setFilterSite(e.target.value);
+              setCurrentPage(1);
+            }}
+          >
+            <MenuItem value=""><em>Tous les sites</em></MenuItem>
+            {sites.map(s => <MenuItem key={s.id} value={String(s.id)}>{s.nom}</MenuItem>)}
+          </Select>
+        </FormControl>
+      </Paper>
 
-      <div className="card">
-        {loading ? <div className="loading">Chargement…</div> : filtered.length === 0 ? (
-          <div className="empty-state"><div className="empty-icon">📍</div><h3>Aucun emplacement</h3></div>
-        ) : (
-          <table className="data-table">
-            <thead><tr><th>Zone</th><th>Rayon</th><th>Étagère</th><th>Site</th><th>Actions</th></tr></thead>
-            <tbody>
-              {filtered.map(e => (
-                <tr key={e.id}>
-                  <td><strong>{e.zone}</strong></td>
-                  <td>{e.rayon||'—'}</td>
-                  <td>{e.etagere||'—'}</td>
-                  <td><span className="badge badge-envoyee">{e.siteNom}</span></td>
-                  <td style={{display:'flex',gap:'0.5rem'}}>
-                    <Link to={`/emplacement/${e.id}`} className="btn btn-secondary" title="Voir">👁️</Link>
-                    <Link to={`/emplacement/edit/${e.id}`} className="btn btn-secondary" title="Modifier">✏️</Link>
-                    <button className="btn btn-danger" onClick={()=>setDeleteId(e.id)} title="Supprimer">🗑️</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {deleteId && (
-        <div style={OV}>
-          <div style={{...MB,maxWidth:'400px',textAlign:'center'}}>
-            <p style={{fontSize:'1.3rem'}}>🗑️</p>
-            <p>Confirmer la suppression ?</p>
-            <div style={{display:'flex',gap:'0.75rem',justifyContent:'center',marginTop:'1rem'}}>
-              <button className="btn btn-secondary" onClick={()=>setDeleteId(null)}>Annuler</button>
-              <button className="btn btn-danger" onClick={confirmDelete}>Supprimer</button>
-            </div>
-          </div>
-        </div>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead sx={{ bgcolor: '#f8fafc' }}>
+                <TableRow>
+                  <TableCell><b>Zone</b></TableCell>
+                  <TableCell><b>Rayon</b></TableCell>
+                  <TableCell><b>Étagère</b></TableCell>
+                  <TableCell><b>Site</b></TableCell>
+                  <TableCell align="right"><b>Actions</b></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {paginatedEmplacements.map((e) => (
+                  <TableRow key={e.id} hover>
+                    <TableCell><Typography variant="body2" sx={{ fontWeight: 'bold', color: '#1e293b' }}>{e.zone}</Typography></TableCell>
+                    <TableCell>{e.rayon || '-'}</TableCell>
+                    <TableCell>{e.etagere || '-'}</TableCell>
+                    <TableCell>
+                      <Chip label={e.siteNom} size="small" color="info" variant="outlined" sx={{ fontWeight: 500 }} />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                        <Tooltip title="Voir">
+                          <IconButton color="info" onClick={() => navigate(`/emplacement/${e.id}`)} size="small">
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Modifier">
+                          <IconButton color="primary" onClick={() => navigate(`/emplacement/edit/${e.id}`)} size="small">
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Supprimer">
+                          <IconButton color="error" onClick={() => { setDeleteId(e.id); setOpenConfirmDialog(true); }} size="small">
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center">Aucun emplacement trouvé</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          
+          {filtered.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filtered.length}
+                pageSize={itemsPerPage}
+              />
+            </Box>
+          )}
+        </>
       )}
-    </div>
+
+      <Dialog open={openConfirmDialog} onClose={() => setOpenConfirmDialog(false)}>
+        <DialogTitle>Confirmer la suppression</DialogTitle>
+        <DialogContent>
+          <Typography>Êtes-vous sûr de vouloir supprimer cet emplacement ?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenConfirmDialog(false)} color="inherit">Annuler</Button>
+          <Button onClick={confirmDelete} color="error" variant="contained">Supprimer</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar({ ...snackbar, open: false })}>
+        <Alert severity={snackbar.severity} sx={{ width: '100%' }}>{snackbar.message}</Alert>
+      </Snackbar>
+    </Box>
   );
 }
-
-const OV = { position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',backdropFilter:'blur(3px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000 };
-const MB = { background:'#fff',borderRadius:'16px',padding:'2rem',width:'95%',maxWidth:'560px',boxShadow:'0 24px 48px rgba(0,0,0,0.18)',maxHeight:'90vh',overflowY:'auto' };

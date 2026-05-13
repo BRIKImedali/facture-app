@@ -5,6 +5,8 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "commandes")
@@ -44,9 +46,12 @@ public class Commande {
     @JoinColumn(name = "site_id", nullable = false)
     private Site site;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "produit_id", nullable = false)
-    private Produit produit;
+    @Column(columnDefinition = "TEXT")
+    private String notes;
+
+    @OneToMany(mappedBy = "commande", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<LigneCommande> lignes = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "devis_id")
@@ -54,6 +59,8 @@ public class Commande {
 
     @PrePersist
     protected void onCreate() {
-        this.dateCommande = LocalDateTime.now();
+        if (this.dateCommande == null) {
+            this.dateCommande = LocalDateTime.now();
+        }
     }
 }

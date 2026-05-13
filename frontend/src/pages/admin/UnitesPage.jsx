@@ -23,11 +23,14 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import { uniteService } from '../../services/uniteService';
+import Pagination from '../../components/Pagination';
 
 const UnitesPage = () => {
   const [unites, setUnites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   const [openDialog, setOpenDialog] = useState(false);
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [currentUnite, setCurrentUnite] = useState({ nom: '', description: '' });
@@ -107,6 +110,9 @@ const UnitesPage = () => {
     (u.description && u.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  const totalPages = Math.ceil(filteredUnites.length / itemsPerPage);
+  const paginatedUnites = filteredUnites.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -127,7 +133,10 @@ const UnitesPage = () => {
           variant="outlined"
           placeholder="Rechercher par nom..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
           size="small"
         />
       </Paper>
@@ -137,8 +146,9 @@ const UnitesPage = () => {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
+        <>
+          <TableContainer component={Paper}>
+            <Table>
             <TableHead sx={{ bgcolor: '#f8fafc' }}>
               <TableRow>
                 <TableCell><b>ID</b></TableCell>
@@ -148,7 +158,7 @@ const UnitesPage = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredUnites.map((unite) => (
+              {paginatedUnites.map((unite) => (
                 <TableRow key={unite.id} hover>
                   <TableCell>{unite.id}</TableCell>
                   <TableCell>{unite.nom}</TableCell>
@@ -175,6 +185,18 @@ const UnitesPage = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        {filteredUnites.length > 0 && (
+          <Box sx={{ mt: 2 }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredUnites.length}
+              pageSize={itemsPerPage}
+            />
+          </Box>
+        )}
+        </>
       )}
 
       {/* Dialog Ajout/Modification */}

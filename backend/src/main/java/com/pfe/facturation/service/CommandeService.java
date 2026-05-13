@@ -85,9 +85,6 @@ public class CommandeService {
                 
         Site site = siteRepository.findById(request.siteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Site introuvable : " + request.siteId()));
-                
-        Produit produit = produitRepository.findById(request.produitId())
-                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable : " + request.produitId()));
 
         Devis devis = null;
         if (request.devisId() != null) {
@@ -102,11 +99,50 @@ public class CommandeService {
                 .client(client)
                 .vendeur(vendeur)
                 .site(site)
-                .produit(produit)
                 .devis(devis)
+                .notes(request.notes())
                 .statut(StatutCommande.EN_ATTENTE)
-                .totalTTC(request.totalTTC())
                 .build();
+                
+        if (request.dateCommande() != null) {
+            commande.setDateCommande(request.dateCommande().atStartOfDay());
+        } else {
+            commande.setDateCommande(java.time.LocalDateTime.now());
+        }
+
+        java.math.BigDecimal totalTTC = java.math.BigDecimal.ZERO;
+        java.util.List<LigneCommande> lignes = new java.util.ArrayList<>();
+
+        for (CreateCommandeRequest.LigneCommandeRequest lreq : request.lignes()) {
+            Produit produit = null;
+            if (lreq.produitId() != null) {
+                produit = produitRepository.findById(lreq.produitId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable : " + lreq.produitId()));
+            }
+
+            java.math.BigDecimal qte = new java.math.BigDecimal(lreq.quantite());
+            java.math.BigDecimal montantHT = lreq.prixUnitaireHT().multiply(qte);
+            java.math.BigDecimal montantTva = montantHT.multiply(java.math.BigDecimal.valueOf(lreq.tauxTva() / 100));
+            java.math.BigDecimal montantLigneTTC = montantHT.add(montantTva);
+
+            LigneCommande ligne = LigneCommande.builder()
+                    .commande(commande)
+                    .produit(produit)
+                    .designation(lreq.designation())
+                    .quantite(lreq.quantite())
+                    .prixUnitaireHT(lreq.prixUnitaireHT())
+                    .tauxTva(lreq.tauxTva())
+                    .montantHT(montantHT)
+                    .montantTva(montantTva)
+                    .montantTTC(montantLigneTTC)
+                    .build();
+            
+            lignes.add(ligne);
+            totalTTC = totalTTC.add(montantLigneTTC);
+        }
+
+        commande.setLignes(lignes);
+        commande.setTotalTTC(totalTTC);
 
         Commande saved = commandeRepository.save(commande);
         log.info("Commande créée : {}", reference);
@@ -154,6 +190,19 @@ public class CommandeService {
     }
 
     public CommandeDTO toDTO(Commande c) {
+        java.util.List<CommandeDTO.LigneCommandeDTO> lignesDTO = c.getLignes() != null ? 
+                c.getLignes().stream().map(l -> new CommandeDTO.LigneCommandeDTO(
+                        l.getId(),
+                        l.getProduit() != null ? l.getProduit().getId() : null,
+                        l.getDesignation(),
+                        l.getQuantite(),
+                        l.getPrixUnitaireHT(),
+                        l.getTauxTva(),
+                        l.getMontantHT(),
+                        l.getMontantTva(),
+                        l.getMontantTTC()
+                )).toList() : new java.util.ArrayList<>();
+
         return new CommandeDTO(
                 c.getId(),
                 c.getReference(),
@@ -163,8 +212,9 @@ public class CommandeService {
                 c.getClient() != null ? clientService.toDTO(c.getClient()) : null,
                 c.getVendeur() != null ? vendeurService.toDTO(c.getVendeur()) : null,
                 c.getSite() != null ? siteService.toDTO(c.getSite()) : null,
-                c.getProduit() != null ? produitService.toDTO(c.getProduit()) : null,
-                c.getDevis() != null ? c.getDevis().getId() : null
+                c.getDevis() != null ? c.getDevis().getId() : null,
+                c.getNotes(),
+                lignesDTO
         );
     }
 

@@ -1,152 +1,230 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import {
+  Box,
+  Button,
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Tooltip,
+  TextField,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Snackbar,
+  Alert,
+  Chip
+} from '@mui/material';
+import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
+
 import { clientService } from '../../services/clientService';
 import { AuthContext } from '../../context/AuthContext';
+import Pagination from '../../components/Pagination';
 
 const ClientList = () => {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [error, setError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
+  useEffect(() => {
+    fetchClients();
+  }, []);
+
   const fetchClients = async () => {
+    setLoading(true);
     try {
-      const res = search
-        ? await clientService.search(search)
-        : await clientService.getAll();
+      const res = await clientService.getAll();
       setClients(res.data);
     } catch (err) {
-      setError('Erreur lors du chargement des clients.');
+      showSnackbar('Erreur lors du chargement des clients.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchClients(); }, []);
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setLoading(true);
-    fetchClients();
+  const confirmDelete = (client) => {
+    setClientToDelete(client);
+    setOpenConfirmDialog(true);
   };
 
-  const handleDelete = async (id, nom) => {
-    if (!window.confirm(`Supprimer le client "${nom}" ?`)) return;
+  const handleDelete = async () => {
     try {
-      await clientService.delete(id);
-      setClients(clients.filter(c => c.id !== id));
+      await clientService.delete(clientToDelete.id);
+      showSnackbar('Client supprimé avec succès', 'success');
+      setClients(clients.filter(c => c.id !== clientToDelete.id));
+      setOpenConfirmDialog(false);
     } catch {
-      setError('Impossible de supprimer ce client (il a peut-être des factures liées).');
+      showSnackbar('Impossible de supprimer ce client (il a peut-être des factures liées).', 'error');
+      setOpenConfirmDialog(false);
     }
   };
 
+  const showSnackbar = (message, severity) => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const filteredClients = clients.filter(c => 
+    c.nom.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (c.email && c.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (c.ville && c.ville.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
+  const paginatedClients = filteredClients.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">👥 Clients</h1>
-          <p className="page-subtitle">{clients.length} client(s) enregistré(s)</p>
-        </div>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Gestion des Clients</Typography>
         {user?.role === 'ADMIN' && (
-          <Link to="/clients/nouveau" className="btn btn-primary">✚ Nouveau client</Link>
+          <Button 
+            variant="contained" 
+            startIcon={<AddIcon />} 
+            onClick={() => navigate('/clients/nouveau')}
+            sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' } }}
+          >
+            Nouveau client
+          </Button>
         )}
-      </div>
+      </Box>
 
-      {error && <div className="alert alert-danger">{error}</div>}
+      <Paper sx={{ mb: 3, p: 2, display: 'flex', alignItems: 'center' }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Rechercher par nom, email, ville..."
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
+          size="small"
+        />
+      </Paper>
 
-      {/* Barre de recherche */}
-      <div className="card" style={{ marginBottom: '1.5rem', padding: '1rem' }}>
-        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.75rem' }}>
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="🔍 Rechercher par nom, email, ville..."
-            className="form-control"
-            style={{ maxWidth: 380 }}
-          />
-          <button type="submit" className="btn btn-primary">Rechercher</button>
-          {search && (
-            <button type="button" className="btn btn-secondary" onClick={() => { setSearch(''); setLoading(true); fetchClients(); }}>
-              Réinitialiser
-            </button>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead sx={{ bgcolor: '#f8fafc' }}>
+                <TableRow>
+                  <TableCell><b>Nom</b></TableCell>
+                  <TableCell><b>Email</b></TableCell>
+                  <TableCell><b>Téléphone</b></TableCell>
+                  <TableCell><b>Ville</b></TableCell>
+                  <TableCell><b>Catégories</b></TableCell>
+                  <TableCell align="right"><b>Actions</b></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {paginatedClients.map((client) => (
+                  <TableRow key={client.id} hover>
+                    <TableCell><strong style={{ color: '#1e293b' }}>{client.nom}</strong></TableCell>
+                    <TableCell>{client.email || '-'}</TableCell>
+                    <TableCell>{client.telephone || '-'}</TableCell>
+                    <TableCell>{client.ville || '-'}</TableCell>
+                    <TableCell>
+                      {client.categories && client.categories.length > 0 ? (
+                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                          {client.categories.map(cat => (
+                            <Chip 
+                              key={cat.id} 
+                              label={cat.nom} 
+                              size="small" 
+                              sx={{ bgcolor: '#e0e7ff', color: '#3730a3', fontWeight: 500, height: '22px', fontSize: '0.75rem' }} 
+                            />
+                          ))}
+                        </Box>
+                      ) : (
+                        '-'
+                      )}
+                    </TableCell>
+                    <TableCell align="right">
+                      {user?.role === 'ADMIN' ? (
+                        <>
+                          <Tooltip title="Modifier">
+                            <IconButton color="primary" onClick={() => navigate(`/clients/${client.id}/modifier`)}>
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Supprimer">
+                            <IconButton color="error" onClick={() => confirmDelete(client)}>
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      ) : (
+                        '-'
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredClients.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center">Aucun client trouvé</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          
+          {filteredClients.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filteredClients.length}
+                pageSize={itemsPerPage}
+              />
+            </Box>
           )}
-        </form>
-      </div>
+        </>
+      )}
 
-      {/* Tableau */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        {loading ? (
-          <div className="loading">Chargement...</div>
-        ) : clients.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">👥</div>
-            <h3>Aucun client trouvé</h3>
-            <p>Commencez par ajouter votre premier client.</p>
-            {user?.role === 'ADMIN' && (
-              <Link to="/clients/nouveau" className="btn btn-primary">Ajouter un client</Link>
-            )}
-          </div>
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Nom</th>
-                <th>Email</th>
-                <th>Téléphone</th>
-                <th>Ville</th>
-                <th>Catégories</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clients.map(c => (
-                <tr key={c.id}>
-                  <td><strong style={{ color: '#1e293b' }}>{c.nom}</strong></td>
-                  <td>{c.email || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
-                  <td>{c.telephone || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
-                  <td>{c.ville || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
-                  <td>
-                    {c.categories && c.categories.length > 0 ? (
-                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                        {c.categories.map(cat => (
-                          <span key={cat.id} style={{ 
-                            background: '#e0e7ff', color: '#3730a3', 
-                            padding: '2px 8px', borderRadius: '12px', 
-                            fontSize: '0.75rem', fontWeight: 500 
-                          }}>
-                            {cat.nom}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span style={{ color: '#cbd5e1' }}>—</span>
-                    )}
-                  </td>
-                  <td>
-                    {user?.role === 'ADMIN' ? (
-                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                        <button className="btn btn-secondary" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }}
-                          onClick={() => navigate(`/clients/${c.id}/modifier`)}>
-                          ✏️ Modifier
-                        </button>
-                        <button className="btn btn-danger" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }}
-                          onClick={() => handleDelete(c.id, c.nom)}>
-                          🗑️ Supprimer
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ textAlign: 'right', color: '#cbd5e1' }}>—</div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
+      {/* Dialog Confirmation Suppression */}
+      <Dialog open={openConfirmDialog} onClose={() => setOpenConfirmDialog(false)}>
+        <DialogTitle>Confirmer la suppression</DialogTitle>
+        <DialogContent>
+          <Typography>Êtes-vous sûr de vouloir supprimer le client "{clientToDelete?.nom}" ?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenConfirmDialog(false)} color="inherit">Annuler</Button>
+          <Button onClick={handleDelete} color="error" variant="contained">Supprimer</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={6000} 
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 };
 

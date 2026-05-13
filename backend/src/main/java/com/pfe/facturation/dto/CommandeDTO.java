@@ -1,6 +1,7 @@
 package com.pfe.facturation.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public record CommandeDTO(
         Long id,
@@ -11,6 +12,19 @@ public record CommandeDTO(
         ClientDTO client,
         VendeurDTO vendeur,
         SiteDTO site,
-        ProduitDTO produit,
-        Long devisId
-) {}
+        Long devisId,
+        String notes,
+        List<LigneCommandeDTO> lignes
+) {
+    public record LigneCommandeDTO(
+            Long id,
+            Long produitId,
+            String designation,
+            Integer quantite,
+            BigDecimal prixUnitaireHT,
+            Double tauxTva,
+            BigDecimal montantHT,
+            BigDecimal montantTva,
+            BigDecimal montantTTC
+    ) {}
+}

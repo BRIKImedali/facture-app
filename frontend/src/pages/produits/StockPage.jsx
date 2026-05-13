@@ -1,142 +1,241 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { stockService }       from '../../services/stockService';
-import { siteService }        from '../../services/siteService';
-import { emplacementService } from '../../services/emplacementService';
-import { produitService }     from '../../services/produitService';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  Box, Button, Typography, Paper, Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, IconButton, Tooltip, CircularProgress,
+  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, Chip,
+  Select, MenuItem, FormControl, InputLabel, FormControlLabel, Checkbox, TextField
+} from '@mui/material';
+import { Edit as EditIcon, Visibility as VisibilityIcon, Add as AddIcon, FileDownload as SortieIcon, FileUpload as EntreeIcon } from '@mui/icons-material';
+
+import { stockService } from '../../services/stockService';
+import { siteService } from '../../services/siteService';
+import Pagination from '../../components/Pagination';
 
 export default function StockPage() {
-  const [stocks,       setStocks]       = useState([]);
-  const [produits,     setProduits]     = useState([]);
-  const [sites,        setSites]        = useState([]);
-  const [emplacements, setEmplacements] = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [filterSite,   setFilterSite]   = useState('');
-  const [alerteOnly,   setAlerteOnly]   = useState(false);
-  const [mouvement,    setMouvement]    = useState(null); // {id, type:'entree'|'sortie'}
-  const [mvQty,        setMvQty]        = useState(1);
+  const [stocks, setStocks] = useState([]);
+  const [sites, setSites] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filterSite, setFilterSite] = useState('');
+  const [alerteOnly, setAlerteOnly] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  const [mouvement, setMouvement] = useState(null); // {id, type:'entree'|'sortie'}
+  const [mvQty, setMvQty] = useState(1);
+  const [openMvDialog, setOpenMvDialog] = useState(false);
+
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const navigate = useNavigate();
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [stR, prR, siR, emR] = await Promise.all([
+      const [stR, siR] = await Promise.all([
         stockService.getAll(),
-        produitService.getActifs(),
-        siteService.getAll(),
-        emplacementService.getAll(),
+        siteService.getAll()
       ]);
       setStocks(stR.data);
-      setProduits(prR.data);
       setSites(siR.data);
-      setEmplacements(emR.data);
-    } catch { toast.error('Impossible de charger les données'); }
-    finally { setLoading(false); }
+    } catch {
+      showSnackbar('Impossible de charger les données', 'error');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   const filtered = stocks.filter(s => {
-    const site  = !filterSite || String(s.siteId) === filterSite;
-    const alerte = !alerteOnly || s.enAlerte;
-    return site && alerte;
+    const siteMatch  = !filterSite || String(s.siteId) === filterSite;
+    const alerteMatch = !alerteOnly || s.enAlerte;
+    return siteMatch && alerteMatch;
   });
 
-
-
   const handleMouvement = async () => {
-    if (mvQty < 1) { toast.error('Quantité invalide'); return; }
+    if (mvQty < 1) { showSnackbar('Quantité invalide', 'error'); return; }
     try {
       mouvement.type === 'entree'
         ? await stockService.entree(mouvement.id, mvQty)
         : await stockService.sortie(mouvement.id, mvQty);
-      toast.success(mouvement.type === 'entree' ? `+${mvQty} entrée enregistrée` : `-${mvQty} sortie enregistrée`);
-      setMouvement(null); setMvQty(1); load();
-    } catch (err) { toast.error(err.response?.data?.message ?? 'Erreur'); }
+      showSnackbar(mouvement.type === 'entree' ? `+${mvQty} entrée enregistrée` : `-${mvQty} sortie enregistrée`, 'success');
+      setOpenMvDialog(false);
+      setMouvement(null);
+      setMvQty(1);
+      load();
+    } catch (err) {
+      showSnackbar(err.response?.data?.message ?? 'Erreur', 'error');
+    }
   };
 
+  const showSnackbar = (message, severity) => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedStocks = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">🗄️ Stocks</h1>
-          <p className="page-subtitle">Inventaire par site et emplacement</p>
-        </div>
-        <Link to="/stock/create" className="btn btn-primary">+ Nouveau stock</Link>
-      </div>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>🗄️ Stocks</Typography>
+        <Button 
+          variant="contained" 
+          startIcon={<AddIcon />} 
+          onClick={() => navigate('/stock/create')}
+          sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' } }}
+        >
+          Nouveau stock
+        </Button>
+      </Box>
 
-      {/* Filtres */}
-      <div className="card" style={{marginBottom:'1rem',padding:'0.75rem 1rem',display:'flex',gap:'1rem',alignItems:'center',flexWrap:'wrap'}}>
-        <select className="form-control" value={filterSite} onChange={e=>setFilterSite(e.target.value)} style={{maxWidth:'220px'}}>
-          <option value="">Tous les sites</option>
-          {sites.map(s=><option key={s.id} value={String(s.id)}>{s.nom}</option>)}
-        </select>
-        <label style={{display:'flex',alignItems:'center',gap:'0.5rem',cursor:'pointer',color:'#ef4444',fontWeight:600}}>
-          <input type="checkbox" checked={alerteOnly} onChange={e=>setAlerteOnly(e.target.checked)} />
-          ⚠️ Alertes uniquement
-        </label>
-      </div>
+      <Paper sx={{ mb: 3, p: 2, display: 'flex', gap: 3, alignItems: 'center', flexWrap: 'wrap' }}>
+        <FormControl size="small" sx={{ minWidth: '220px' }}>
+          <InputLabel>Filtrer par site</InputLabel>
+          <Select
+            value={filterSite}
+            label="Filtrer par site"
+            onChange={(e) => {
+              setFilterSite(e.target.value);
+              setCurrentPage(1);
+            }}
+          >
+            <MenuItem value=""><em>Tous les sites</em></MenuItem>
+            {sites.map(s => <MenuItem key={s.id} value={String(s.id)}>{s.nom}</MenuItem>)}
+          </Select>
+        </FormControl>
+        
+        <FormControlLabel
+          control={
+            <Checkbox 
+              checked={alerteOnly} 
+              onChange={e => {
+                setAlerteOnly(e.target.checked);
+                setCurrentPage(1);
+              }}
+              color="error"
+            />
+          }
+          label={<Typography sx={{ color: '#ef4444', fontWeight: 'bold' }}>⚠️ Alertes uniquement</Typography>}
+        />
+      </Paper>
 
-      {/* Tableau */}
-      <div className="card">
-        {loading ? <div className="loading">Chargement…</div> : filtered.length === 0 ? (
-          <div className="empty-state"><div className="empty-icon">🗄️</div><h3>Aucun stock</h3></div>
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Produit</th><th>Site</th><th>Emplacement</th>
-                <th>Quantité</th><th>Seuil min.</th><th>Statut</th><th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(s => (
-                <tr key={s.id}>
-                  <td><strong>{s.produitNom}</strong></td>
-                  <td>{s.siteNom}</td>
-                  <td>{s.emplacementLabel || '—'}</td>
-                  <td style={{fontWeight:700, color: s.enAlerte ? '#ef4444' : '#16a34a'}}>{s.quantite}</td>
-                  <td>{s.seuilMinimum}</td>
-                  <td>
-                    {s.enAlerte
-                      ? <span className="badge badge-annulee">⚠️ Alerte</span>
-                      : <span className="badge badge-payee">✓ OK</span>}
-                  </td>
-                  <td style={{display:'flex',gap:'0.4rem',flexWrap:'wrap'}}>
-                    <button className="btn btn-success"   title="Entrée"  onClick={()=>{setMouvement({id:s.id,type:'entree'}); setMvQty(1);}}>📥</button>
-                    <button className="btn btn-warning"   title="Sortie"  onClick={()=>{setMouvement({id:s.id,type:'sortie'}); setMvQty(1);}}>📤</button>
-                    <Link to={`/stock/${s.id}`} className="btn btn-secondary" title="Voir">👁️</Link>
-                    <Link to={`/stock/edit/${s.id}`} className="btn btn-secondary" title="Modifier">✏️</Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-
-
-      {/* ── Modale mouvement entrée/sortie ── */}
-      {mouvement && (
-        <div style={OV}>
-          <div style={{...MB,maxWidth:'380px',textAlign:'center'}}>
-            <p style={{fontSize:'1.8rem'}}>{mouvement.type==='entree'?'📥':'📤'}</p>
-            <h3 style={{margin:'0 0 1rem'}}>{mouvement.type==='entree'?'Entrée de stock':'Sortie de stock'}</h3>
-            <div className="form-group">
-              <label>Quantité</label>
-              <input className="form-control" type="number" min="1" value={mvQty} onChange={e=>setMvQty(Number(e.target.value))} style={{textAlign:'center',fontSize:'1.2rem'}} />
-            </div>
-            <div style={{display:'flex',gap:'0.75rem',justifyContent:'center',marginTop:'1rem'}}>
-              <button className="btn btn-secondary" onClick={()=>setMouvement(null)}>Annuler</button>
-              <button className={`btn ${mouvement.type==='entree'?'btn-success':'btn-warning'}`} onClick={handleMouvement}>Confirmer</button>
-            </div>
-          </div>
-        </div>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead sx={{ bgcolor: '#f8fafc' }}>
+                <TableRow>
+                  <TableCell><b>Produit</b></TableCell>
+                  <TableCell><b>Site</b></TableCell>
+                  <TableCell><b>Emplacement</b></TableCell>
+                  <TableCell><b>Quantité</b></TableCell>
+                  <TableCell><b>Seuil min.</b></TableCell>
+                  <TableCell><b>Statut</b></TableCell>
+                  <TableCell align="right"><b>Actions</b></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {paginatedStocks.map((s) => (
+                  <TableRow key={s.id} hover>
+                    <TableCell><Typography variant="body2" sx={{ fontWeight: 'bold', color: '#1e293b' }}>{s.produitNom}</Typography></TableCell>
+                    <TableCell>{s.siteNom}</TableCell>
+                    <TableCell>{s.emplacementLabel || '-'}</TableCell>
+                    <TableCell>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold', color: s.enAlerte ? '#ef4444' : '#16a34a' }}>
+                        {s.quantite}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>{s.seuilMinimum}</TableCell>
+                    <TableCell>
+                      {s.enAlerte ? (
+                        <Chip label="⚠️ Alerte" size="small" color="error" sx={{ fontWeight: 'bold' }} />
+                      ) : (
+                        <Chip label="✓ OK" size="small" color="success" sx={{ fontWeight: 'bold' }} />
+                      )}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                        <Tooltip title="Entrée">
+                          <IconButton color="success" onClick={() => { setMouvement({id: s.id, type: 'entree'}); setMvQty(1); setOpenMvDialog(true); }} size="small">
+                            <EntreeIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Sortie">
+                          <IconButton color="warning" onClick={() => { setMouvement({id: s.id, type: 'sortie'}); setMvQty(1); setOpenMvDialog(true); }} size="small">
+                            <SortieIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Voir">
+                          <IconButton color="info" onClick={() => navigate(`/stock/${s.id}`)} size="small">
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Modifier">
+                          <IconButton color="primary" onClick={() => navigate(`/stock/edit/${s.id}`)} size="small">
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">Aucun stock trouvé</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          
+          {filtered.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filtered.length}
+                pageSize={itemsPerPage}
+              />
+            </Box>
+          )}
+        </>
       )}
-    </div>
+
+      {/* Dialog Mouvement */}
+      <Dialog open={openMvDialog} onClose={() => setOpenMvDialog(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ textAlign: 'center' }}>
+          <Typography variant="h3" sx={{ mb: 1 }}>{mouvement?.type === 'entree' ? '📥' : '📤'}</Typography>
+          <Typography variant="h6" fontWeight="bold">
+            {mouvement?.type === 'entree' ? 'Entrée de stock' : 'Sortie de stock'}
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+          <TextField
+            label="Quantité"
+            type="number"
+            fullWidth
+            InputProps={{ inputProps: { min: 1, style: { textAlign: 'center', fontSize: '1.2rem', fontWeight: 'bold' } } }}
+            value={mvQty}
+            onChange={e => setMvQty(Number(e.target.value))}
+          />
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
+          <Button onClick={() => setOpenMvDialog(false)} color="inherit">Annuler</Button>
+          <Button onClick={handleMouvement} color={mouvement?.type === 'entree' ? 'success' : 'warning'} variant="contained">
+            Confirmer
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar({ ...snackbar, open: false })}>
+        <Alert severity={snackbar.severity} sx={{ width: '100%' }}>{snackbar.message}</Alert>
+      </Snackbar>
+    </Box>
   );
 }
-
-const OV = {position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',backdropFilter:'blur(3px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000};
-const MB = {background:'#fff',borderRadius:'16px',padding:'2rem',width:'95%',maxWidth:'600px',boxShadow:'0 24px 48px rgba(0,0,0,0.18)',maxHeight:'90vh',overflowY:'auto'};

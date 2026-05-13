@@ -9,6 +9,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -73,8 +75,30 @@ public class AuditService {
     public Page<AuditLog> getLogs(String username, String actionType, String entityType,
                                    LocalDateTime startDate, LocalDateTime endDate,
                                    int page, int size) {
-        return auditLogRepository.findWithFilters(
-            username, actionType, entityType, startDate, endDate,
+        Specification<AuditLog> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new java.util.ArrayList<>();
+            
+            if (username != null && !username.trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("username")), "%" + username.toLowerCase() + "%"));
+            }
+            if (actionType != null && !actionType.trim().isEmpty()) {
+                predicates.add(cb.equal(root.get("actionType"), actionType));
+            }
+            if (entityType != null && !entityType.trim().isEmpty()) {
+                predicates.add(cb.equal(root.get("entityType"), entityType));
+            }
+            if (startDate != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), startDate));
+            }
+            if (endDate != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("createdAt"), endDate));
+            }
+            
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return auditLogRepository.findAll(
+            spec,
             PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
         );
     }
