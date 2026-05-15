@@ -4,11 +4,13 @@ import toast from 'react-hot-toast';
 import { clientService } from '../../services/clientService';
 import { produitService } from '../../services/produitService';
 import { devisService } from '../../services/devisService';
+import { tauxTvaService } from '../../services/tauxTvaService';
 
 const DevisCreate = () => {
   const navigate = useNavigate();
   const [clients, setClients] = useState([]);
   const [produits, setProduits] = useState([]);
+  const [tauxTvaList, setTauxTvaList] = useState([]);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -16,13 +18,18 @@ const DevisCreate = () => {
   const [dateDevis, setDateDevis] = useState(new Date().toISOString().split('T')[0]);
   const [dateExpiration, setDateExpiration] = useState('');
   const [notes, setNotes] = useState('');
+  const [remise, setRemise] = useState(0);
   const [lignes, setLignes] = useState([
     { produitId: '', designation: '', quantite: 1, prixUnitaireHT: '', tauxTva: 19 }
   ]);
 
   useEffect(() => {
-    Promise.all([clientService.getAll(), produitService.getActifs()])
-      .then(([cRes, pRes]) => { setClients(cRes.data); setProduits(pRes.data); });
+    Promise.all([clientService.getAll(), produitService.getActifs(), tauxTvaService.getAllActifs()])
+      .then(([cRes, pRes, tRes]) => {
+        setClients(cRes.data);
+        setProduits(pRes.data);
+        setTauxTvaList(tRes.data);
+      });
   }, []);
 
   const handleProduitChange = (index, produitId) => {
@@ -60,6 +67,10 @@ const DevisCreate = () => {
     const t = calcLigne(l);
     return { ht: acc.ht + t.ht, tva: acc.tva + t.tva, ttc: acc.ttc + t.ttc };
   }, { ht: 0, tva: 0, ttc: 0 });
+  const remisePct = parseFloat(remise) || 0;
+  const htApresRemise = totaux.ht * (1 - remisePct / 100);
+  const tvaApresRemise = totaux.tva * (1 - remisePct / 100);
+  const ttcFinal = htApresRemise + tvaApresRemise;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -75,6 +86,7 @@ const DevisCreate = () => {
         dateDevis: dateDevis || null,
         dateExpiration: dateExpiration || null,
         notes,
+        remise: remisePct > 0 ? remisePct : null,
         lignes: lignes.map(l => ({
           produitId: l.produitId ? parseInt(l.produitId) : null,
           designation: l.designation,
@@ -120,6 +132,12 @@ const DevisCreate = () => {
             <div className="form-group">
               <label>Date d'expiration</label>
               <input type="date" value={dateExpiration} onChange={e => setDateExpiration(e.target.value)} className="form-control" />
+            </div>
+            <div className="form-group">
+              <label>Remise globale (%)</label>
+              <input type="number" min="0" max="100" step="0.5" value={remise}
+                onChange={e => setRemise(e.target.value)} className="form-control"
+                placeholder="0 = aucune remise" />
             </div>
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label>Notes / Conditions</label>
@@ -174,10 +192,16 @@ const DevisCreate = () => {
                     </td>
                     <td>
                       <select value={l.tauxTva} onChange={e => handleLigneChange(i, 'tauxTva', e.target.value)} className="form-control">
-                        <option value={0}>0% — Exonéré</option>
-                        <option value={7}>7% — Taux réduit</option>
-                        <option value={13}>13% — Taux intermédiaire</option>
-                        <option value={19}>19% — Taux normal</option>
+                        {tauxTvaList.length > 0
+                          ? tauxTvaList.map(t => (
+                              <option key={t.id} value={t.valeur}>
+                                {t.valeur}% — {t.description}
+                              </option>
+                            ))
+                          : (
+                              <option value={l.tauxTva}>{l.tauxTva}%</option>
+                            )
+                        }
                       </select>
                     </td>
                     <td><strong>{ttc.toFixed(2)}</strong></td>
@@ -195,15 +219,25 @@ const DevisCreate = () => {
 
           {/* Totaux */}
           <div style={{ padding: '1rem 1.5rem', background: '#f8fafc', borderTop: '2px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
-            <div style={{ textAlign: 'right', minWidth: 220 }}>
+            <div style={{ textAlign: 'right', minWidth: 240 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginBottom: '0.3rem', fontSize: '0.875rem', color: '#64748b' }}>
                 <span>Total HT :</span><span>{totaux.ht.toFixed(2)} TND</span>
               </div>
+              {remisePct > 0 && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginBottom: '0.3rem', fontSize: '0.875rem', color: '#f59e0b' }}>
+                    <span>Remise ({remisePct}%) :</span><span>-{(totaux.ht * remisePct / 100).toFixed(2)} TND</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginBottom: '0.3rem', fontSize: '0.875rem', color: '#64748b' }}>
+                    <span>HT après remise :</span><span>{htApresRemise.toFixed(2)} TND</span>
+                  </div>
+                </>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginBottom: '0.3rem', fontSize: '0.875rem', color: '#64748b' }}>
-                <span>Total TVA :</span><span>{totaux.tva.toFixed(2)} TND</span>
+                <span>Total TVA :</span><span>{tvaApresRemise.toFixed(2)} TND</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', fontSize: '1.1rem', fontWeight: 700, color: '#1e293b', borderTop: '1px solid #e2e8f0', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
-                <span>Total TTC :</span><span>{totaux.ttc.toFixed(2)} TND</span>
+                <span>Total TTC :</span><span>{ttcFinal.toFixed(2)} TND</span>
               </div>
             </div>
           </div>

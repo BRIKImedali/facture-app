@@ -11,7 +11,7 @@ import java.util.Optional;
 @Repository
 public interface UniteRepository extends JpaRepository<Unite, Long> {
     Optional<Unite> findByNom(String nom);
-    boolean existsByNom(String nom);
+    boolean existsByNomIgnoreCase(String nom);
 
     @Query("SELECT u FROM Unite u WHERE LOWER(u.nom) LIKE LOWER(CONCAT('%', :query, '%'))")
     List<Unite> searchByNom(String query);

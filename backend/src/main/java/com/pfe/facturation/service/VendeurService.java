@@ -3,6 +3,7 @@ package com.pfe.facturation.service;
 import com.pfe.facturation.dto.VendeurDTO;
 import com.pfe.facturation.entity.Vendeur;
 import com.pfe.facturation.exception.ResourceNotFoundException;
+import com.pfe.facturation.repository.ClientRepository;
 import com.pfe.facturation.repository.VendeurRepository;
 import com.pfe.facturation.security.repository.UserRepository;
 import org.slf4j.Logger;
@@ -20,10 +21,13 @@ public class VendeurService {
 
     private final VendeurRepository vendeurRepository;
     private final UserRepository userRepository;
+    private final ClientRepository clientRepository;
 
-    public VendeurService(VendeurRepository vendeurRepository, UserRepository userRepository) {
+    public VendeurService(VendeurRepository vendeurRepository, UserRepository userRepository,
+                          ClientRepository clientRepository) {
         this.vendeurRepository = vendeurRepository;
         this.userRepository = userRepository;
+        this.clientRepository = clientRepository;
     }
 
     // ===== Lecture =====
@@ -109,9 +113,16 @@ public class VendeurService {
     }
 
     public void delete(Long id) {
-        if (!vendeurRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Vendeur introuvable avec l'id : " + id);
+        Vendeur vendeur = getOrThrow(id);
+
+        // Règle métier : impossible de supprimer si des clients sont associés
+        if (clientRepository.existsByVendeurId(id)) {
+            throw new IllegalStateException(
+                "Impossible de supprimer le vendeur '" + vendeur.getPrenom() + " " + vendeur.getNom() +
+                "' car des clients lui sont associés."
+            );
         }
+
         vendeurRepository.deleteById(id);
         log.info("Vendeur supprimé : id={}", id);
     }

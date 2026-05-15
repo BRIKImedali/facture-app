@@ -43,6 +43,32 @@ const CONTACTS_ACCORDION = {
         { key: 'categorie-liste', to: '/categories-clients', label: 'Catégories', end: true },
       ],
     },
+    {
+      key: 'devises-group',
+      icon: '💱',
+      label: 'Devises',
+      children: [
+        { key: 'devise-liste', to: '/devises', label: 'Devises monétaires', end: true },
+      ],
+    },
+  ],
+};
+
+// ─── Accordion definition for "TVA" ──────────────────────────────────────────
+const TVA_ACCORDION = {
+  key: 'tva',
+  icon: '🏷',
+  label: 'TVA',
+  permission: 'FACTURES',
+  children: [
+    {
+      key: 'taux-tva-group',
+      icon: '%',
+      label: 'Taux de TVA',
+      children: [
+        { key: 'taux-tva-liste', to: '/taux-tva', label: 'Gestion des taux TVA', end: true },
+      ],
+    },
   ],
 };
 
@@ -54,19 +80,19 @@ const COMMERCE_ACCORDION = {
   permission: 'FACTURES',
   children: [
     {
-      key: 'commandes-group',
-      icon: '🛍️',
-      label: 'Commandes',
-      children: [
-        { key: 'commande-liste', to: '/commandes', label: 'Liste des commandes', end: true },
-      ],
-    },
-    {
       key: 'devis-group',
       icon: '📄',
       label: 'Devis',
       children: [
         { key: 'devis-liste', to: '/devis', label: 'Liste des devis', end: true },
+      ],
+    },
+    {
+      key: 'commandes-group',
+      icon: '🛍️',
+      label: 'Commandes',
+      children: [
+        { key: 'commande-liste', to: '/commandes', label: 'Liste des commandes', end: true },
       ],
     },
     {
@@ -298,6 +324,15 @@ const Layout = () => {
           {showProduits && (
             <AccordionGroup
               group={PRODUITS_ACCORDION}
+              depth={1}
+              closeSidebar={closeSidebar}
+            />
+          )}
+
+          {/* ── TVA — accordion au-dessus de Commerce ── */}
+          {showCommerce && (
+            <AccordionGroup
+              group={TVA_ACCORDION}
               depth={1}
               closeSidebar={closeSidebar}
             />

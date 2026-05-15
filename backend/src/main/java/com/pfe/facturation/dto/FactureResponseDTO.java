@@ -5,7 +5,6 @@ import java.util.List;
 
 /**
  * DTO de réponse pour une facture complète.
- * Contient toutes les informations affichables sur la facture.
  */
 public record FactureResponseDTO(
         Long id,
@@ -18,6 +17,8 @@ public record FactureResponseDTO(
         ClientDTO client,
         List<LigneResponseDTO> lignes,
         BigDecimal totalHT,
+        BigDecimal remise,
+        BigDecimal totalHT_apres_remise,
         BigDecimal totalTva,
         BigDecimal totalTTC,
         String paymentMethod
@@ -36,7 +37,7 @@ public record FactureResponseDTO(
             Long produitId
     ) {}
 
-public String getNumero() {
+    public String getNumero() {
         return null;
-}
+    }
 }

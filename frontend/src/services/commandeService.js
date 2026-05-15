@@ -5,6 +5,7 @@ export const commandeService = {
   getById: (id) => api.get(`/commandes/${id}`),
   getByClient: (clientId) => api.get(`/commandes/client/${clientId}`),
   create: (data) => api.post('/commandes', data),
+  update: (id, data) => api.put(`/commandes/${id}`, data),
   updateStatut: (id, statut) => api.patch(`/commandes/${id}/statut`, { statut }),
-  delete: (id) => api.delete(`/commandes/${id}`)
+  delete: (id) => api.delete(`/commandes/${id}`),
 };

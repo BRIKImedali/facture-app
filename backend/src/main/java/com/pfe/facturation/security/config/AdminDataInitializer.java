@@ -7,6 +7,7 @@ import com.pfe.facturation.security.entity.Role;
 import com.pfe.facturation.security.entity.User;
 import com.pfe.facturation.security.repository.UserRepository;
 import com.pfe.facturation.service.RoleService;
+import com.pfe.facturation.service.TauxTvaService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,7 @@ public class AdminDataInitializer {
     private final UserRepository userRepository;
     private final AppRoleRepository appRoleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TauxTvaService tauxTvaService;
 
     /**
      * CommandLineRunner @Order(2) — s'exécute après le DataInitializer (implicitement @Order(1)).
@@ -52,7 +54,10 @@ public class AdminDataInitializer {
             // 1. Créer les permissions et rôles par défaut
             roleService.initDefaultData();
 
-            // 2. Assigner SUPER_ADMIN à l'utilisateur admin existant
+            // 2. Initialiser les taux TVA par défaut
+            tauxTvaService.initDefaultTaux();
+
+            // 3. Assigner SUPER_ADMIN à l'utilisateur admin existant
             assignSuperAdminToAdmin();
 
             log.info("=== Module d'administration initialisé ===");

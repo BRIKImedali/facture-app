@@ -24,8 +24,14 @@ import {
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import { categorieClientService } from '../../services/categorieClientService';
 import Pagination from '../../components/Pagination';
+import usePermission from '../../hooks/usePermission';
 
 const CategoriesClientsPage = () => {
+  const { hasPermission } = usePermission();
+  const canCreate = hasPermission('CATEGORIE:CREATE');
+  const canUpdate = hasPermission('CATEGORIE:UPDATE');
+  const canDelete = hasPermission('CATEGORIE:DELETE');
+
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,7 +87,10 @@ const CategoriesClientsPage = () => {
       handleCloseDialog();
       fetchCategories();
     } catch (error) {
-      showSnackbar('Erreur lors de la sauvegarde', 'error');
+      const msg = error.response?.data?.message
+        || error.response?.data
+        || 'Erreur lors de la sauvegarde';
+      showSnackbar(msg, 'error');
     }
   };
 
@@ -117,14 +126,16 @@ const CategoriesClientsPage = () => {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Gestion des Catégories Clients</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-          sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' } }}
-        >
-          Ajouter une catégorie
-        </Button>
+        {canCreate && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog()}
+            sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' } }}
+          >
+            Ajouter une catégorie
+          </Button>
+        )}
       </Box>
 
       <Paper sx={{ mb: 3, p: 2, display: 'flex', alignItems: 'center' }}>
@@ -149,53 +160,57 @@ const CategoriesClientsPage = () => {
         <>
           <TableContainer component={Paper}>
             <Table>
-            <TableHead sx={{ bgcolor: '#f8fafc' }}>
-              <TableRow>
-                <TableCell><b>ID</b></TableCell>
-                <TableCell><b>Nom</b></TableCell>
-                <TableCell><b>Description</b></TableCell>
-                <TableCell align="right"><b>Actions</b></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {paginatedCategories.map((category) => (
-                <TableRow key={category.id} hover>
-                  <TableCell>{category.id}</TableCell>
-                  <TableCell>{category.nom}</TableCell>
-                  <TableCell>{category.description || '-'}</TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Modifier">
-                      <IconButton color="primary" onClick={() => handleOpenDialog(category)}>
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Supprimer">
-                      <IconButton color="error" onClick={() => confirmDelete(category)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredCategories.length === 0 && (
+              <TableHead sx={{ bgcolor: '#f8fafc' }}>
                 <TableRow>
-                  <TableCell colSpan={4} align="center">Aucune catégorie trouvée</TableCell>
+                  <TableCell><b>ID</b></TableCell>
+                  <TableCell><b>Nom</b></TableCell>
+                  <TableCell><b>Description</b></TableCell>
+                  <TableCell align="right"><b>Actions</b></TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        {filteredCategories.length > 0 && (
-          <Box sx={{ mt: 2 }}>
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              totalItems={filteredCategories.length}
-              pageSize={itemsPerPage}
-            />
-          </Box>
-        )}
+              </TableHead>
+              <TableBody>
+                {paginatedCategories.map((category) => (
+                  <TableRow key={category.id} hover>
+                    <TableCell>{category.id}</TableCell>
+                    <TableCell>{category.nom}</TableCell>
+                    <TableCell>{category.description || '-'}</TableCell>
+                    <TableCell align="right">
+                      {canUpdate && (
+                        <Tooltip title="Modifier">
+                          <IconButton color="primary" onClick={() => handleOpenDialog(category)}>
+                            <EditIcon />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {canDelete && (
+                        <Tooltip title="Supprimer">
+                          <IconButton color="error" onClick={() => confirmDelete(category)}>
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredCategories.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center">Aucune catégorie trouvée</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          {filteredCategories.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filteredCategories.length}
+                pageSize={itemsPerPage}
+              />
+            </Box>
+          )}
         </>
       )}
 

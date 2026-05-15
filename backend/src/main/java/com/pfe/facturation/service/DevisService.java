@@ -7,6 +7,7 @@ import com.pfe.facturation.repository.*;
 import com.pfe.facturation.security.entity.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,16 +28,21 @@ public class DevisService {
     private final ClientRepository clientRepository;
     private final ProduitRepository produitRepository;
     private final ClientService clientService;
+    private final CommandeService commandeService;
 
     public DevisService(DevisRepository devisRepository,
                         ClientRepository clientRepository,
                         ProduitRepository produitRepository,
-                        ClientService clientService) {
+                        ClientService clientService,
+                        @Lazy CommandeService commandeService) {
         this.devisRepository = devisRepository;
         this.clientRepository = clientRepository;
         this.produitRepository = produitRepository;
         this.clientService = clientService;
+        this.commandeService = commandeService;
     }
+
+    // ===== Lecture =====
 
     @Transactional(readOnly = true)
     public List<DevisDTO> findAll() {
@@ -61,6 +67,8 @@ public class DevisService {
                 .stream().map(this::toDTO).toList();
     }
 
+    // ===== Création =====
+
     public DevisDTO create(CreateDevisRequest request, User creator) {
         Client client = clientRepository.findById(request.clientId())
                 .orElseThrow(() -> new ResourceNotFoundException("Client introuvable : " + request.clientId()));
@@ -68,18 +76,28 @@ public class DevisService {
         String reference = generateReference();
 
         List<LigneDevis> lignes = request.lignes().stream()
-                .map(this::buildLigne)
+                .map(this::buildLignefromCreate)
                 .toList();
 
         BigDecimal totalHT = lignes.stream()
                 .map(LigneDevis::getMontantHT)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        BigDecimal remise = request.remise() != null ? request.remise() : BigDecimal.ZERO;
+        BigDecimal totalHTApresRemise = appliquerRemise(totalHT, remise);
+
+        // TVA recalculée proportionnellement sur le HT après remise
+        BigDecimal ratioRemise = totalHT.compareTo(BigDecimal.ZERO) > 0
+                ? totalHTApresRemise.divide(totalHT, 10, RoundingMode.HALF_UP)
+                : BigDecimal.ONE;
+
         BigDecimal totalTva = lignes.stream()
                 .map(LigneDevis::getMontantTva)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .multiply(ratioRemise)
+                .setScale(2, RoundingMode.HALF_UP);
 
-        BigDecimal totalTTC = totalHT.add(totalTva);
+        BigDecimal totalTTC = totalHTApresRemise.add(totalTva);
 
         Devis devis = Devis.builder()
                 .reference(reference)
@@ -88,8 +106,10 @@ public class DevisService {
                 .statut(StatutDevis.BROUILLON)
                 .dateExpiration(request.dateExpiration())
                 .notes(request.notes())
+                .remise(remise.compareTo(BigDecimal.ZERO) > 0 ? remise : null)
                 .totalHT(totalHT.setScale(2, RoundingMode.HALF_UP))
-                .totalTva(totalTva.setScale(2, RoundingMode.HALF_UP))
+                .totalHT_apres_remise(totalHTApresRemise.setScale(2, RoundingMode.HALF_UP))
+                .totalTva(totalTva)
                 .totalTTC(totalTTC.setScale(2, RoundingMode.HALF_UP))
                 .build();
 
@@ -103,6 +123,62 @@ public class DevisService {
         return toDTO(withLignes);
     }
 
+    // ===== Mise à jour complète (PUT) =====
+
+    public DevisDTO update(Long id, UpdateDevisRequest request) {
+        Devis devis = getOrThrow(id);
+
+        if (devis.getStatut() != StatutDevis.BROUILLON && devis.getStatut() != StatutDevis.ENVOYE) {
+            throw new IllegalStateException(
+                    "Modification impossible : le devis est en statut " + devis.getStatut() +
+                    ". Seuls les devis BROUILLON ou ENVOYE sont modifiables.");
+        }
+
+        // Reconstruire les lignes
+        List<LigneDevis> nouvellesLignes = request.lignes().stream()
+                .map(this::buildLigneFromUpdate)
+                .toList();
+
+        BigDecimal totalHT = nouvellesLignes.stream()
+                .map(LigneDevis::getMontantHT)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal remise = request.remise() != null ? request.remise() : BigDecimal.ZERO;
+        BigDecimal totalHTApresRemise = appliquerRemise(totalHT, remise);
+
+        BigDecimal ratioRemise = totalHT.compareTo(BigDecimal.ZERO) > 0
+                ? totalHTApresRemise.divide(totalHT, 10, RoundingMode.HALF_UP)
+                : BigDecimal.ONE;
+
+        BigDecimal totalTva = nouvellesLignes.stream()
+                .map(LigneDevis::getMontantTva)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .multiply(ratioRemise)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal totalTTC = totalHTApresRemise.add(totalTva);
+
+        // Mettre à jour les champs
+        devis.setDateExpiration(request.dateExpiration());
+        devis.setNotes(request.notes());
+        devis.setRemise(remise.compareTo(BigDecimal.ZERO) > 0 ? remise : null);
+        devis.setTotalHT(totalHT.setScale(2, RoundingMode.HALF_UP));
+        devis.setTotalHT_apres_remise(totalHTApresRemise.setScale(2, RoundingMode.HALF_UP));
+        devis.setTotalTva(totalTva);
+        devis.setTotalTTC(totalTTC.setScale(2, RoundingMode.HALF_UP));
+
+        // Remplacer les lignes (orphanRemoval = true → les anciennes sont supprimées)
+        devis.getLignes().clear();
+        nouvellesLignes.forEach(l -> l.setDevis(devis));
+        devis.getLignes().addAll(nouvellesLignes);
+
+        Devis saved = devisRepository.save(devis);
+        log.info("Devis {} mis à jour", devis.getReference());
+        return toDTO(saved);
+    }
+
+    // ===== Changement de statut + déclenchement automatique =====
+
     public DevisDTO updateStatut(Long id, UpdateStatutDevisRequest request) {
         Devis devis = getOrThrow(id);
         StatutDevis ancienStatut = devis.getStatut();
@@ -113,8 +189,16 @@ public class DevisService {
         devis.setStatut(nouveauStatut);
         Devis saved = devisRepository.save(devis);
         log.info("Devis {} : statut changé de {} → {}", devis.getReference(), ancienStatut, nouveauStatut);
+
+        // ── Flux automatique : ACCEPTE → création d'une Commande ──────────────
+        if (nouveauStatut == StatutDevis.ACCEPTE) {
+            commandeService.creerDepuisDevis(saved);
+        }
+
         return toDTO(saved);
     }
+
+    // ===== Suppression =====
 
     public void delete(Long id) {
         Devis devis = getOrThrow(id);
@@ -125,13 +209,25 @@ public class DevisService {
         log.info("Devis supprimé : id={}", id);
     }
 
+    // ===== Méthodes privées =====
+
     private synchronized String generateReference() {
         int year = LocalDate.now().getYear();
         long count = devisRepository.countByYear(year);
         return String.format("DEV-%d-%04d", year, count + 1);
     }
 
-    private LigneDevis buildLigne(CreateDevisRequest.LigneDevisRequest lr) {
+    /** Applique une remise en % sur un montant HT. */
+    private BigDecimal appliquerRemise(BigDecimal montantHT, BigDecimal remisePct) {
+        if (remisePct == null || remisePct.compareTo(BigDecimal.ZERO) == 0) {
+            return montantHT;
+        }
+        BigDecimal facteur = BigDecimal.ONE
+                .subtract(remisePct.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP));
+        return montantHT.multiply(facteur).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private LigneDevis buildLignefromCreate(CreateDevisRequest.LigneDevisRequest lr) {
         BigDecimal montantHT = lr.prixUnitaireHT()
                 .multiply(new BigDecimal(lr.quantite()))
                 .setScale(2, RoundingMode.HALF_UP);
@@ -153,8 +249,33 @@ public class DevisService {
                 .build();
 
         if (lr.produitId() != null) {
-            produitRepository.findById(lr.produitId())
-                    .ifPresent(ligne::setProduit);
+            produitRepository.findById(lr.produitId()).ifPresent(ligne::setProduit);
+        }
+
+        return ligne;
+    }
+
+    private LigneDevis buildLigneFromUpdate(UpdateDevisRequest.LigneDevisRequest lr) {
+        BigDecimal montantHT = lr.prixUnitaireHT()
+                .multiply(new BigDecimal(lr.quantite()))
+                .setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal montantTva = montantHT
+                .multiply(BigDecimal.valueOf(lr.tauxTva()))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+        LigneDevis ligne = LigneDevis.builder()
+                .designation(lr.designation())
+                .quantite(lr.quantite())
+                .prixUnitaireHT(lr.prixUnitaireHT())
+                .tauxTva(lr.tauxTva())
+                .montantHT(montantHT)
+                .montantTva(montantTva)
+                .montantTTC(montantHT.add(montantTva))
+                .build();
+
+        if (lr.produitId() != null) {
+            produitRepository.findById(lr.produitId()).ifPresent(ligne::setProduit);
         }
 
         return ligne;
@@ -198,6 +319,8 @@ public class DevisService {
                 d.getClient() != null ? clientService.toDTO(d.getClient()) : null,
                 lignesDTO,
                 d.getTotalHT(),
+                d.getRemise(),
+                d.getTotalHT_apres_remise(),
                 d.getTotalTva(),
                 d.getTotalTTC()
         );

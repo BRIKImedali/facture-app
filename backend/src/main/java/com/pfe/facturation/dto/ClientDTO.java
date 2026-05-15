@@ -17,5 +17,13 @@ public record ClientDTO(
         String codePostal,
         String pays,
         String ice,
-        java.util.List<Long> categorieIds
+        java.util.List<Long> categorieIds,
+        // Vendeur (optionnel)
+        Long vendeurId,
+        String vendeurNom,
+        // Devise (optionnel)
+        Long deviseId,
+        String deviseCode,
+        String deviseSymbole
 ) {}
+

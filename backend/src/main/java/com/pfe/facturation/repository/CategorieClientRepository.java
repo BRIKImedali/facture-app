@@ -11,7 +11,7 @@ import java.util.Optional;
 @Repository
 public interface CategorieClientRepository extends JpaRepository<CategorieClient, Long> {
     Optional<CategorieClient> findByNom(String nom);
-    boolean existsByNom(String nom);
+    boolean existsByNomIgnoreCase(String nom);
 
     @Query("SELECT c FROM CategorieClient c WHERE LOWER(c.nom) LIKE LOWER(CONCAT('%', :query, '%'))")
     List<CategorieClient> searchByNom(String query);

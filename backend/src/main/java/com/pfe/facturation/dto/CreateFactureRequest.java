@@ -1,5 +1,7 @@
 package com.pfe.facturation.dto;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -18,6 +20,8 @@ public record CreateFactureRequest(
         LocalDate dateEcheance,
         String notes,
         String paymentMethod,
+        /** Remise en % (0 à 100). Optionnel, null = aucune remise. */
+        @DecimalMin(value = "0.0") @DecimalMax(value = "100.0") BigDecimal remise,
         @NotEmpty(message = "La facture doit contenir au moins une ligne") List<LigneRequest> lignes
 ) {
 

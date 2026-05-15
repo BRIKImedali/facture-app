@@ -8,12 +8,16 @@ public record CommandeDTO(
         String reference,
         String statut,
         String dateCommande,
-        BigDecimal totalTTC,
         ClientDTO client,
         VendeurDTO vendeur,
         SiteDTO site,
         Long devisId,
         String notes,
+        BigDecimal remise,
+        BigDecimal totalHT,
+        BigDecimal totalHT_apres_remise,
+        BigDecimal totalTva,
+        BigDecimal totalTTC,
         List<LigneCommandeDTO> lignes
 ) {
     public record LigneCommandeDTO(

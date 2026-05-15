@@ -1,31 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Button, 
-  Typography, 
-  Paper, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  IconButton, 
-  Tooltip, 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogActions, 
-  TextField, 
-  Snackbar, 
-  Alert, 
+import {
+  Box,
+  Button,
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Snackbar,
+  Alert,
   CircularProgress
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import { uniteService } from '../../services/uniteService';
 import Pagination from '../../components/Pagination';
+import usePermission from '../../hooks/usePermission';
 
 const UnitesPage = () => {
+  const { hasPermission } = usePermission();
+  const canCreate = hasPermission('UNITE:CREATE');
+  const canUpdate = hasPermission('UNITE:UPDATE');
+  const canDelete = hasPermission('UNITE:DELETE');
+
   const [unites, setUnites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,7 +41,7 @@ const UnitesPage = () => {
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [currentUnite, setCurrentUnite] = useState({ nom: '', description: '' });
   const [uniteToDelete, setUniteToDelete] = useState(null);
-  
+
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
@@ -81,7 +87,10 @@ const UnitesPage = () => {
       handleCloseDialog();
       fetchUnites();
     } catch (error) {
-      showSnackbar('Erreur lors de la sauvegarde', 'error');
+      const msg = error.response?.data?.message
+        || error.response?.data
+        || 'Erreur lors de la sauvegarde';
+      showSnackbar(msg, 'error');
     }
   };
 
@@ -105,8 +114,8 @@ const UnitesPage = () => {
     setSnackbar({ open: true, message, severity });
   };
 
-  const filteredUnites = unites.filter(u => 
-    u.nom.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  const filteredUnites = unites.filter(u =>
+    u.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (u.description && u.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
@@ -117,14 +126,16 @@ const UnitesPage = () => {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Gestion des Unités</Typography>
-        <Button 
-          variant="contained" 
-          startIcon={<AddIcon />} 
-          onClick={() => handleOpenDialog()}
-          sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' } }}
-        >
-          Ajouter une unité
-        </Button>
+        {canCreate && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog()}
+            sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' } }}
+          >
+            Ajouter une unité
+          </Button>
+        )}
       </Box>
 
       <Paper sx={{ mb: 3, p: 2, display: 'flex', alignItems: 'center' }}>
@@ -149,53 +160,57 @@ const UnitesPage = () => {
         <>
           <TableContainer component={Paper}>
             <Table>
-            <TableHead sx={{ bgcolor: '#f8fafc' }}>
-              <TableRow>
-                <TableCell><b>ID</b></TableCell>
-                <TableCell><b>Nom</b></TableCell>
-                <TableCell><b>Description</b></TableCell>
-                <TableCell align="right"><b>Actions</b></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {paginatedUnites.map((unite) => (
-                <TableRow key={unite.id} hover>
-                  <TableCell>{unite.id}</TableCell>
-                  <TableCell>{unite.nom}</TableCell>
-                  <TableCell>{unite.description || '-'}</TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Modifier">
-                      <IconButton color="primary" onClick={() => handleOpenDialog(unite)}>
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Supprimer">
-                      <IconButton color="error" onClick={() => confirmDelete(unite)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredUnites.length === 0 && (
+              <TableHead sx={{ bgcolor: '#f8fafc' }}>
                 <TableRow>
-                  <TableCell colSpan={4} align="center">Aucune unité trouvée</TableCell>
+                  <TableCell><b>ID</b></TableCell>
+                  <TableCell><b>Nom</b></TableCell>
+                  <TableCell><b>Description</b></TableCell>
+                  <TableCell align="right"><b>Actions</b></TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        {filteredUnites.length > 0 && (
-          <Box sx={{ mt: 2 }}>
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              totalItems={filteredUnites.length}
-              pageSize={itemsPerPage}
-            />
-          </Box>
-        )}
+              </TableHead>
+              <TableBody>
+                {paginatedUnites.map((unite) => (
+                  <TableRow key={unite.id} hover>
+                    <TableCell>{unite.id}</TableCell>
+                    <TableCell>{unite.nom}</TableCell>
+                    <TableCell>{unite.description || '-'}</TableCell>
+                    <TableCell align="right">
+                      {canUpdate && (
+                        <Tooltip title="Modifier">
+                          <IconButton color="primary" onClick={() => handleOpenDialog(unite)}>
+                            <EditIcon />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {canDelete && (
+                        <Tooltip title="Supprimer">
+                          <IconButton color="error" onClick={() => confirmDelete(unite)}>
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredUnites.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center">Aucune unité trouvée</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          {filteredUnites.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filteredUnites.length}
+                pageSize={itemsPerPage}
+              />
+            </Box>
+          )}
         </>
       )}
 
@@ -239,9 +254,9 @@ const UnitesPage = () => {
         </DialogActions>
       </Dialog>
 
-      <Snackbar 
-        open={snackbar.open} 
-        autoHideDuration={6000} 
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
         <Alert severity={snackbar.severity} sx={{ width: '100%' }}>

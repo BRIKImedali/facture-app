@@ -43,10 +43,16 @@ import ErpConfig from './components/admin/erp/ErpConfig';
 import AuditLog from './components/admin/audit/AuditLog';
 import UnitesPage from './pages/admin/UnitesPage';
 import CategoriesClientsPage from './pages/admin/CategoriesClientsPage';
+import DevisesPage from './pages/admin/DevisesPage';
+import TauxTvaPage from './pages/admin/TauxTvaPage';
 import CommandeList from './pages/commandes/CommandeList';
 import CommandeCreate from './pages/commandes/CommandeCreate';
+import CommandeDetail from './pages/commandes/CommandeDetail';
+import CommandeEdit from './pages/commandes/CommandeEdit';
 import DevisList from './pages/devis/DevisList';
 import DevisCreate from './pages/devis/DevisCreate';
+import DevisDetail from './pages/devis/DevisDetail';
+import DevisEdit from './pages/devis/DevisEdit';
 
 function App() {
   return (
@@ -106,17 +112,23 @@ function App() {
 
             <Route path="/commandes"                      element={<PermissionGuard permissions="COMMANDE:READ" redirect><CommandeList /></PermissionGuard>} />
             <Route path="/commandes/nouvelle"             element={<PermissionGuard permissions="COMMANDE:CREATE" redirect><CommandeCreate /></PermissionGuard>} />
+            <Route path="/commandes/:id"                  element={<PermissionGuard permissions="COMMANDE:READ" redirect><CommandeDetail /></PermissionGuard>} />
+            <Route path="/commandes/:id/modifier"         element={<PermissionGuard permissions="COMMANDE:UPDATE" redirect><CommandeEdit /></PermissionGuard>} />
 
             <Route path="/devis"                          element={<PermissionGuard permissions="DEVIS:READ" redirect><DevisList /></PermissionGuard>} />
             <Route path="/devis/nouveau"                  element={<PermissionGuard permissions="DEVIS:CREATE" redirect><DevisCreate /></PermissionGuard>} />
+            <Route path="/devis/:id"                      element={<PermissionGuard permissions="DEVIS:READ" redirect><DevisDetail /></PermissionGuard>} />
+            <Route path="/devis/:id/modifier"             element={<PermissionGuard permissions="DEVIS:UPDATE" redirect><DevisEdit /></PermissionGuard>} />
 
             <Route path="/factures"                       element={<PermissionGuard permissions="FACTURE:READ" redirect><FactureList /></PermissionGuard>} />
             <Route path="/factures/nouvelle"              element={<PermissionGuard permissions="FACTURE:CREATE" redirect><FactureCreate /></PermissionGuard>} />
             <Route path="/factures/:id"                   element={<PermissionGuard permissions="FACTURE:READ" redirect><FactureDetail /></PermissionGuard>} />
 
-            {/* ── Unités & Catégories (sous Layout principal) ── */}
+            {/* ── Unités, Catégories, Devises & TVA (sous Layout principal) ── */}
             <Route path="/unites"              element={<PermissionGuard permissions="UNITE:READ" redirect><UnitesPage /></PermissionGuard>} />
             <Route path="/categories-clients" element={<PermissionGuard permissions="CATEGORIE:READ" redirect><CategoriesClientsPage /></PermissionGuard>} />
+            <Route path="/devises"            element={<PermissionGuard permissions="DEVISE:READ" redirect><DevisesPage /></PermissionGuard>} />
+            <Route path="/taux-tva"           element={<PermissionGuard permissions="TVA:READ" redirect><TauxTvaPage /></PermissionGuard>} />
           </Route>
 
           {/* ====================================================

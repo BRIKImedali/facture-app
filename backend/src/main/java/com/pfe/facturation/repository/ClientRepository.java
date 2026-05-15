@@ -14,6 +14,12 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
     /** Vérifie si un email est déjà utilisé par un autre client */
     boolean existsByEmail(String email);
 
+    /** Vérifie si une devise est utilisée par au moins un client */
+    boolean existsByDeviseId(Long deviseId);
+
+    /** Vérifie si un vendeur est associé à au moins un client */
+    boolean existsByVendeurId(Long vendeurId);
+
     /** Recherche textuelle sur nom, email ou ville (insensible à la casse) */
     @Query("SELECT c FROM Client c WHERE " +
            "LOWER(c.nom) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
@@ -21,3 +27,4 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
            "LOWER(c.ville) LIKE LOWER(CONCAT('%', :q, '%'))")
     List<Client> search(@Param("q") String query);
 }
+

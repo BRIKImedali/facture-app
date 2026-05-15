@@ -133,6 +133,8 @@ const ClientList = () => {
                   <TableCell><b>Email</b></TableCell>
                   <TableCell><b>Téléphone</b></TableCell>
                   <TableCell><b>Ville</b></TableCell>
+                  <TableCell><b>Vendeur</b></TableCell>
+                  <TableCell><b>Devise</b></TableCell>
                   <TableCell><b>Catégories</b></TableCell>
                   <TableCell align="right"><b>Actions</b></TableCell>
                 </TableRow>
@@ -145,17 +147,30 @@ const ClientList = () => {
                     <TableCell>{client.telephone || '-'}</TableCell>
                     <TableCell>{client.ville || '-'}</TableCell>
                     <TableCell>
-                      {client.categories && client.categories.length > 0 ? (
-                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                          {client.categories.map(cat => (
-                            <Chip 
-                              key={cat.id} 
-                              label={cat.nom} 
-                              size="small" 
-                              sx={{ bgcolor: '#e0e7ff', color: '#3730a3', fontWeight: 500, height: '22px', fontSize: '0.75rem' }} 
-                            />
-                          ))}
-                        </Box>
+                      {client.vendeurNom ? (
+                        <Chip
+                          label={client.vendeurNom}
+                          size="small"
+                          sx={{ bgcolor: '#ede9fe', color: '#5b21b6', fontWeight: 500, height: '22px', fontSize: '0.75rem' }}
+                        />
+                      ) : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {client.deviseSymbole ? (
+                        <Chip
+                          label={`${client.deviseSymbole} ${client.deviseCode}`}
+                          size="small"
+                          sx={{ bgcolor: '#fef9c3', color: '#854d0e', fontWeight: 600, height: '22px', fontSize: '0.75rem' }}
+                        />
+                      ) : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {client.categorieIds && client.categorieIds.length > 0 ? (
+                        <Chip
+                          label={`${client.categorieIds.length} catégorie${client.categorieIds.length > 1 ? 's' : ''}`}
+                          size="small"
+                          sx={{ bgcolor: '#e0e7ff', color: '#3730a3', fontWeight: 500, height: '22px', fontSize: '0.75rem' }}
+                        />
                       ) : (
                         '-'
                       )}
@@ -182,7 +197,7 @@ const ClientList = () => {
                 ))}
                 {filteredClients.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} align="center">Aucun client trouvé</TableCell>
+                    <TableCell colSpan={8} align="center">Aucun client trouvé</TableCell>
                   </TableRow>
                 )}
               </TableBody>

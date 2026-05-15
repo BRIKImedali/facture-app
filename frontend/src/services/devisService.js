@@ -5,6 +5,7 @@ export const devisService = {
   getById: (id) => api.get(`/devis/${id}`),
   getByClient: (clientId) => api.get(`/devis/client/${clientId}`),
   create: (data) => api.post('/devis', data),
+  update: (id, data) => api.put(`/devis/${id}`, data),
   updateStatut: (id, statut) => api.patch(`/devis/${id}/statut`, { statut }),
-  delete: (id) => api.delete(`/devis/${id}`)
+  delete: (id) => api.delete(`/devis/${id}`),
 };

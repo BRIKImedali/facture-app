@@ -31,6 +31,20 @@ public class Commande {
     @Builder.Default
     private StatutCommande statut = StatutCommande.EN_ATTENTE;
 
+    /** Remise globale en pourcentage (0–100). Null = pas de remise. */
+    @Column(precision = 5, scale = 2)
+    private BigDecimal remise;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal totalHT;
+
+    /** Total HT après application de la remise : totalHT * (1 - remise/100) */
+    @Column(precision = 12, scale = 2)
+    private BigDecimal totalHT_apres_remise;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal totalTva;
+
     @Column(precision = 12, scale = 2)
     private BigDecimal totalTTC;
 

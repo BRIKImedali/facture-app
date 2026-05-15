@@ -112,33 +112,22 @@ public class FactureService {
         );
     }
 
-    // ===== Création =====
+    // ===== Création manuelle =====
 
     public FactureResponseDTO create(CreateFactureRequest request, User creator) {
-        // 1. Vérifier que le client existe
         Client client = clientRepository.findById(request.clientId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Client introuvable avec l'id : " + request.clientId()));
 
-        // 2. Générer le numéro de facture avant de sauvegarder
         String numero = generateNumero();
 
-        // 3. Construire les lignes et calculer les totaux
         List<LigneFacture> lignes = request.lignes().stream()
-                .map(lr -> buildLigne(lr))
+                .map(this::buildLigne)
                 .toList();
 
-        BigDecimal totalHT = lignes.stream()
-                .map(LigneFacture::getMontantHT)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal remise = request.remise() != null ? request.remise() : BigDecimal.ZERO;
+        BigDecimal[] totaux = calculerTotaux(lignes, remise);
 
-        BigDecimal totalTva = lignes.stream()
-                .map(LigneFacture::getMontantTva)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal totalTTC = totalHT.add(totalTva);
-
-        // 4. Construire et sauvegarder la facture
         Facture facture = Facture.builder()
                 .numero(numero)
                 .client(client)
@@ -146,20 +135,62 @@ public class FactureService {
                 .statut(StatutFacture.BROUILLON)
                 .dateEcheance(request.dateEcheance())
                 .notes(request.notes())
-                .totalHT(totalHT.setScale(2, RoundingMode.HALF_UP))
-                .totalTva(totalTva.setScale(2, RoundingMode.HALF_UP))
-                .totalTTC(totalTTC.setScale(2, RoundingMode.HALF_UP))
+                .remise(remise.compareTo(BigDecimal.ZERO) > 0 ? remise : null)
+                .totalHT(totaux[0])
+                .totalHT_apres_remise(totaux[1])
+                .totalTva(totaux[2])
+                .totalTTC(totaux[3])
                 .paymentMethod(request.paymentMethod() != null ? PaymentMethod.valueOf(request.paymentMethod()) : null)
                 .build();
 
         Facture saved = factureRepository.save(facture);
-
-        // 5. Associer les lignes à la facture sauvegardée
         lignes.forEach(l -> l.setFacture(saved));
         saved.getLignes().addAll(lignes);
         Facture withLignes = factureRepository.save(saved);
 
         log.info("Facture créée : {} pour le client {}", numero, client.getNom());
+        return toDTO(withLignes);
+    }
+
+    // ===== Création automatique depuis une Commande (VALIDEE → Facture) =====
+
+    public FactureResponseDTO creerDepuisCommande(com.pfe.facturation.entity.Commande commande) {
+        String numero = generateNumero();
+        BigDecimal remise = commande.getRemise() != null ? commande.getRemise() : BigDecimal.ZERO;
+
+        // Copier les lignes de la commande vers la facture
+        Facture facture = Facture.builder()
+                .numero(numero)
+                .client(commande.getClient())
+                .statut(StatutFacture.BROUILLON)
+                .notes("Facture générée automatiquement depuis la commande " + commande.getReference())
+                .remise(remise.compareTo(BigDecimal.ZERO) > 0 ? remise : null)
+                .totalHT(commande.getTotalHT())
+                .totalHT_apres_remise(commande.getTotalHT_apres_remise())
+                .totalTva(commande.getTotalTva())
+                .totalTTC(commande.getTotalTTC())
+                .build();
+
+        Facture savedFacture = factureRepository.save(facture);
+
+        List<LigneFacture> lignes = commande.getLignes().stream()
+                .map(lc -> LigneFacture.builder()
+                        .facture(savedFacture)
+                        .produit(lc.getProduit())
+                        .designation(lc.getDesignation())
+                        .quantite(lc.getQuantite())
+                        .prixUnitaireHT(lc.getPrixUnitaireHT())
+                        .tauxTva(lc.getTauxTva())
+                        .montantHT(lc.getMontantHT())
+                        .montantTva(lc.getMontantTva())
+                        .montantTTC(lc.getMontantTTC())
+                        .build())
+                .toList();
+
+        savedFacture.getLignes().addAll(lignes);
+        Facture withLignes = factureRepository.save(savedFacture);
+
+        log.info("Facture {} créée automatiquement depuis commande {}", numero, commande.getReference());
         return toDTO(withLignes);
     }
 
@@ -203,6 +234,37 @@ public class FactureService {
         int year = LocalDate.now().getYear();
         long count = factureRepository.countByYear(year);
         return String.format("FAC-%d-%04d", year, count + 1);
+    }
+
+    /** Calcule [totalHT, totalHTApresRemise, totalTva, totalTTC] */
+    private BigDecimal[] calculerTotaux(List<LigneFacture> lignes, BigDecimal remisePct) {
+        BigDecimal totalHT = lignes.stream()
+                .map(LigneFacture::getMontantHT)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal totalHTApresRemise;
+        BigDecimal ratioRemise;
+        if (remisePct != null && remisePct.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal facteur = BigDecimal.ONE
+                    .subtract(remisePct.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP));
+            totalHTApresRemise = totalHT.multiply(facteur).setScale(2, RoundingMode.HALF_UP);
+            ratioRemise = totalHT.compareTo(BigDecimal.ZERO) > 0
+                    ? totalHTApresRemise.divide(totalHT, 10, RoundingMode.HALF_UP)
+                    : BigDecimal.ONE;
+        } else {
+            totalHTApresRemise = totalHT;
+            ratioRemise = BigDecimal.ONE;
+        }
+
+        BigDecimal totalTva = lignes.stream()
+                .map(LigneFacture::getMontantTva)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .multiply(ratioRemise)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal totalTTC = totalHTApresRemise.add(totalTva).setScale(2, RoundingMode.HALF_UP);
+        return new BigDecimal[]{totalHT, totalHTApresRemise, totalTva, totalTTC};
     }
 
     /** Construit une LigneFacture et calcule ses montants */
@@ -276,6 +338,8 @@ public class FactureService {
                 f.getClient() != null ? clientService.toDTO(f.getClient()) : null,
                 lignesDTO,
                 f.getTotalHT(),
+                f.getRemise(),
+                f.getTotalHT_apres_remise(),
                 f.getTotalTva(),
                 f.getTotalTTC(),
                 f.getPaymentMethod() != null ? f.getPaymentMethod().name() : null

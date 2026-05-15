@@ -38,8 +38,8 @@ public class UniteService {
     @Auditable(action = "CREATE", entity = "Unite", description = "Création d'une unité")
     @Transactional
     public UniteDTO createUnite(UniteDTO dto) {
-        if (uniteRepository.existsByNom(dto.getNom())) {
-            throw new RuntimeException("Une unité avec ce nom existe déjà");
+        if (uniteRepository.existsByNomIgnoreCase(dto.getNom())) {
+            throw new IllegalStateException("Une unité avec ce nom existe déjà");
         }
         Unite unite = new Unite();
         unite.setNom(dto.getNom());
@@ -53,8 +53,8 @@ public class UniteService {
         Unite unite = uniteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Unité non trouvée : " + id));
         
-        if (!unite.getNom().equals(dto.getNom()) && uniteRepository.existsByNom(dto.getNom())) {
-            throw new RuntimeException("Une unité avec ce nom existe déjà");
+        if (!unite.getNom().equalsIgnoreCase(dto.getNom()) && uniteRepository.existsByNomIgnoreCase(dto.getNom())) {
+            throw new IllegalStateException("Une unité avec ce nom existe déjà");
         }
         
         unite.setNom(dto.getNom());

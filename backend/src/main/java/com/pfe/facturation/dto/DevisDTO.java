@@ -14,6 +14,8 @@ public record DevisDTO(
         ClientDTO client,
         List<LigneDevisDTO> lignes,
         BigDecimal totalHT,
+        BigDecimal remise,
+        BigDecimal totalHT_apres_remise,
         BigDecimal totalTva,
         BigDecimal totalTTC
 ) {

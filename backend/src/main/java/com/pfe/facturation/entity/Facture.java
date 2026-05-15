@@ -83,15 +83,23 @@ public class Facture {
 
     // ===== Totaux calculés et persistés =====
 
+    /** Remise globale en pourcentage (0–100). Null = pas de remise. */
+    @Column(precision = 5, scale = 2)
+    private BigDecimal remise;
+
     /** Total Hors Taxes (somme des montants HT de toutes les lignes) */
     @Column(precision = 12, scale = 2)
     private BigDecimal totalHT;
 
-    /** Total de la TVA */
+    /** Total HT après application de la remise : totalHT * (1 - remise/100) */
+    @Column(precision = 12, scale = 2)
+    private BigDecimal totalHT_apres_remise;
+
+    /** Total de la TVA (calculé sur totalHT_apres_remise) */
     @Column(precision = 12, scale = 2)
     private BigDecimal totalTva;
 
-    /** Total TTC = totalHT + totalTva */
+    /** Total TTC = totalHT_apres_remise + totalTva */
     @Column(precision = 12, scale = 2)
     private BigDecimal totalTTC;
 

@@ -2,6 +2,7 @@ package com.pfe.facturation.controller;
 
 import com.pfe.facturation.dto.DevisDTO;
 import com.pfe.facturation.dto.CreateDevisRequest;
+import com.pfe.facturation.dto.UpdateDevisRequest;
 import com.pfe.facturation.dto.UpdateStatutDevisRequest;
 import com.pfe.facturation.entity.StatutDevis;
 import com.pfe.facturation.security.entity.User;
@@ -61,6 +62,16 @@ public class DevisController {
             @AuthenticationPrincipal User currentUser) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(devisService.create(request, currentUser));
+    }
+
+    /** Modification complète : lignes, remise, notes, dates (statut BROUILLON ou ENVOYE uniquement) */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasPermission('DEVIS', 'UPDATE')")
+    @Operation(summary = "Modifier un devis (lignes, remise, notes, dates)")
+    public ResponseEntity<DevisDTO> update(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody UpdateDevisRequest request) {
+        return ResponseEntity.ok(devisService.update(id, request));
     }
 
     @PatchMapping("/{id}/statut")

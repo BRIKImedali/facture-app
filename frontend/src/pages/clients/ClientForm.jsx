@@ -4,6 +4,8 @@ import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { clientService } from '../../services/clientService';
 import { categorieClientService } from '../../services/categorieClientService';
+import { vendeurService } from '../../services/vendeurService';
+import { deviseService } from '../../services/deviseService';
 
 const ClientForm = () => {
   const { id } = useParams();
@@ -11,9 +13,11 @@ const ClientForm = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState([]);
+  const [vendeurs, setVendeurs] = useState([]);
+  const [devises, setDevises] = useState([]);
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting } } = useForm({
-    defaultValues: { pays: 'Maroc', categorieIds: [] }
+    defaultValues: { pays: 'Maroc', categorieIds: [], vendeurId: null, deviseId: null }
   });
 
   const selectedCategories = watch('categorieIds') || [];
@@ -21,9 +25,15 @@ const ClientForm = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const catRes = await categorieClientService.getAll();
+        const [catRes, vendRes, devRes] = await Promise.all([
+          categorieClientService.getAll(),
+          vendeurService.getActifs(),
+          deviseService.getAll(),
+        ]);
         setCategories(catRes.data || []);
-        
+        setVendeurs(vendRes.data || []);
+        setDevises(devRes.data || []);
+
         if (isEdit) {
           const clientRes = await clientService.getById(id);
           const clientData = clientRes.data;
@@ -42,22 +52,19 @@ const ClientForm = () => {
     fetchData();
   }, [id, isEdit, reset]);
 
-  const toggleCategory = (catId) => {
-    const current = selectedCategories;
-    if (current.includes(catId)) {
-      setValue('categorieIds', current.filter(id => id !== catId), { shouldDirty: true });
-    } else {
-      setValue('categorieIds', [...current, catId], { shouldDirty: true });
-    }
-  };
-
   const onSubmit = async (data) => {
     try {
+      // Convert empty strings to null for optional FK fields
+      const payload = {
+        ...data,
+        vendeurId: data.vendeurId ? Number(data.vendeurId) : null,
+        deviseId: data.deviseId ? Number(data.deviseId) : null,
+      };
       if (isEdit) {
-        await clientService.update(id, data);
+        await clientService.update(id, payload);
         toast.success('Client mis à jour avec succès !');
       } else {
-        await clientService.create(data);
+        await clientService.create(payload);
         toast.success('Client ajouté avec succès !');
       }
       navigate('/clients');
@@ -80,6 +87,7 @@ const ClientForm = () => {
       <div className="card">
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="form-grid">
+            {/* ── Nom ── */}
             <div className="form-group">
               <label>Nom du client *</label>
               <input {...register('nom', { required: 'Le nom est obligatoire' })}
@@ -88,6 +96,7 @@ const ClientForm = () => {
               {errors.nom && <span className="error-text">{errors.nom.message}</span>}
             </div>
 
+            {/* ── Email ── */}
             <div className="form-group">
               <label>Email</label>
               <input {...register('email', { pattern: { value: /\S+@\S+\.\S+/, message: 'Email invalide' } })}
@@ -96,36 +105,43 @@ const ClientForm = () => {
               {errors.email && <span className="error-text">{errors.email.message}</span>}
             </div>
 
+            {/* ── Téléphone ── */}
             <div className="form-group">
               <label>Téléphone</label>
               <input {...register('telephone')} className="form-control" placeholder="+212 6xx xxx xxx" />
             </div>
 
+            {/* ── ICE ── */}
             <div className="form-group">
               <label>ICE (Numéro fiscal)</label>
               <input {...register('ice')} className="form-control" placeholder="000000000000000" />
             </div>
 
+            {/* ── Adresse ── */}
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label>Adresse</label>
               <input {...register('adresse')} className="form-control" placeholder="123 Rue Mohammed V" />
             </div>
 
+            {/* ── Ville ── */}
             <div className="form-group">
               <label>Ville</label>
               <input {...register('ville')} className="form-control" placeholder="Casablanca" />
             </div>
 
+            {/* ── Code postal ── */}
             <div className="form-group">
               <label>Code postal</label>
               <input {...register('codePostal')} className="form-control" placeholder="20000" />
             </div>
 
+            {/* ── Pays ── */}
             <div className="form-group">
               <label>Pays</label>
               <input {...register('pays')} className="form-control" />
             </div>
 
+            {/* ── Catégorie ── */}
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label>Catégorie</label>
               {categories.length === 0 ? (
@@ -154,6 +170,41 @@ const ClientForm = () => {
               <span style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '4px', display: 'block' }}>
                 Maintenez <kbd style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '3px', padding: '0 4px', fontSize: '0.75rem' }}>Ctrl</kbd> pour sélectionner plusieurs catégories
               </span>
+            </div>
+
+            {/* ── Vendeur (optionnel) ── */}
+            <div className="form-group">
+              <label>Vendeur <span style={{ color: '#94a3b8', fontWeight: 400 }}>(optionnel)</span></label>
+              <select
+                {...register('vendeurId')}
+                className="form-control"
+                defaultValue=""
+              >
+                <option value="">— Aucun vendeur —</option>
+                {vendeurs.map(v => (
+                  <option key={v.id} value={v.id}>
+                    {v.prenom} {v.nom}
+                    {v.matriculeInterne ? ` (${v.matriculeInterne})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* ── Devise (optionnel) ── */}
+            <div className="form-group">
+              <label>Devise <span style={{ color: '#94a3b8', fontWeight: 400 }}>(optionnel)</span></label>
+              <select
+                {...register('deviseId')}
+                className="form-control"
+                defaultValue=""
+              >
+                <option value="">— Aucune devise —</option>
+                {devises.map(d => (
+                  <option key={d.id} value={d.id}>
+                    {d.symbole} — {d.code} — {d.nom}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

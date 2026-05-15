@@ -38,8 +38,8 @@ public class CategorieClientService {
     @Auditable(action = "CREATE", entity = "CategorieClient", description = "Création d'une catégorie client")
     @Transactional
     public CategorieClientDTO createCategorie(CategorieClientDTO dto) {
-        if (categorieClientRepository.existsByNom(dto.getNom())) {
-            throw new RuntimeException("Une catégorie avec ce nom existe déjà");
+        if (categorieClientRepository.existsByNomIgnoreCase (dto.getNom())) {
+            throw new IllegalStateException("Une catégorie avec ce nom existe déjà");
         }
         CategorieClient categorie = new CategorieClient();
         categorie.setNom(dto.getNom());
@@ -53,8 +53,8 @@ public class CategorieClientService {
         CategorieClient categorie = categorieClientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Catégorie non trouvée : " + id));
         
-        if (!categorie.getNom().equals(dto.getNom()) && categorieClientRepository.existsByNom(dto.getNom())) {
-            throw new RuntimeException("Une catégorie avec ce nom existe déjà");
+        if (!categorie.getNom().equalsIgnoreCase(dto.getNom()) && categorieClientRepository.existsByNomIgnoreCase(dto.getNom())) {
+             throw new IllegalStateException("Une catégorie avec ce nom existe déjà");
         }
         
         categorie.setNom(dto.getNom());

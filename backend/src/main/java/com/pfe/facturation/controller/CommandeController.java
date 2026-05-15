@@ -2,6 +2,7 @@ package com.pfe.facturation.controller;
 
 import com.pfe.facturation.dto.CommandeDTO;
 import com.pfe.facturation.dto.CreateCommandeRequest;
+import com.pfe.facturation.dto.UpdateCommandeRequest;
 import com.pfe.facturation.dto.UpdateStatutCommandeRequest;
 import com.pfe.facturation.entity.StatutCommande;
 import com.pfe.facturation.service.CommandeService;
@@ -53,11 +54,21 @@ public class CommandeController {
 
     @PostMapping
     @PreAuthorize("hasPermission('COMMANDE', 'CREATE')")
-    @Operation(summary = "Créer une nouvelle commande")
+    @Operation(summary = "Créer une nouvelle commande (avec ou sans devis)")
     public ResponseEntity<CommandeDTO> create(
             @Valid @RequestBody CreateCommandeRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(commandeService.create(request));
+    }
+
+    /** Modification complète : lignes, remise, notes, date (statut EN_ATTENTE uniquement) */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasPermission('COMMANDE', 'UPDATE')")
+    @Operation(summary = "Modifier une commande (lignes, remise, notes, date)")
+    public ResponseEntity<CommandeDTO> update(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody UpdateCommandeRequest request) {
+        return ResponseEntity.ok(commandeService.update(id, request));
     }
 
     @PatchMapping("/{id}/statut")

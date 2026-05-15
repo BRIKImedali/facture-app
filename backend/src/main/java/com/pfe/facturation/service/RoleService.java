@@ -205,6 +205,14 @@ public class RoleService {
             {"CATEGORIE", "READ", "Voir les catégories"},
             {"CATEGORIE", "UPDATE", "Modifier des catégories"},
             {"CATEGORIE", "DELETE", "Supprimer des catégories"},
+            {"DEVISE", "CREATE", "Créer des devises"},
+            {"DEVISE", "READ", "Voir les devises"},
+            {"DEVISE", "UPDATE", "Modifier des devises"},
+            {"DEVISE", "DELETE", "Supprimer des devises"},
+            {"TVA", "CREATE", "Créer des taux de TVA"},
+            {"TVA", "READ", "Voir les taux de TVA"},
+            {"TVA", "UPDATE", "Modifier des taux de TVA"},
+            {"TVA", "DELETE", "Supprimer des taux de TVA"},
             {"COMMANDE", "CREATE", "Créer des commandes"},
             {"COMMANDE", "READ", "Voir les commandes"},
             {"COMMANDE", "UPDATE", "Modifier des commandes"},
@@ -244,13 +252,22 @@ public class RoleService {
             new HashSet<>(allPerms));
 
         // MANAGER — CRUD factures, clients, produits, commandes, devis
+        //           DEVISE & TVA : READ + CREATE + UPDATE uniquement (pas de DELETE)
         Set<Permission> managerPerms = new HashSet<>(permissionRepository.findByEntity("FACTURE"));
         managerPerms.addAll(permissionRepository.findByEntity("CLIENT"));
         managerPerms.addAll(permissionRepository.findByEntity("VENDEUR"));
         managerPerms.addAll(permissionRepository.findByEntity("PRODUIT"));
         managerPerms.addAll(permissionRepository.findByEntity("COMMANDE"));
         managerPerms.addAll(permissionRepository.findByEntity("DEVIS"));
-        createDefaultRole("MANAGER", "Manager — gestion des factures, clients, vendeurs, produits, commandes et devis", true, managerPerms);
+        // Devise : CREATE + READ + UPDATE (pas DELETE — réservé à ADMIN)
+        permissionRepository.findByEntityAndAction("DEVISE", "READ").ifPresent(managerPerms::add);
+        permissionRepository.findByEntityAndAction("DEVISE", "CREATE").ifPresent(managerPerms::add);
+        permissionRepository.findByEntityAndAction("DEVISE", "UPDATE").ifPresent(managerPerms::add);
+        // TVA : CREATE + READ + UPDATE (pas DELETE — réservé à ADMIN)
+        permissionRepository.findByEntityAndAction("TVA", "READ").ifPresent(managerPerms::add);
+        permissionRepository.findByEntityAndAction("TVA", "CREATE").ifPresent(managerPerms::add);
+        permissionRepository.findByEntityAndAction("TVA", "UPDATE").ifPresent(managerPerms::add);
+        createDefaultRole("MANAGER", "Manager — gestion des factures, clients, vendeurs, produits, commandes, devis (TVA/Devise sans suppression)", true, managerPerms);
 
         // USER — READ + CREATE factures, devis
         Set<Permission> userPerms = new HashSet<>();

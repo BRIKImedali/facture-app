@@ -62,6 +62,20 @@ public class Client {
     )
     private java.util.List<CategorieClient> categories;
 
+    /**
+     * Vendeur responsable du client (optionnel).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vendeur_id")
+    private Vendeur vendeur;
+
+    /**
+     * Devise de facturation du client (optionnel).
+     */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "devise_id")
+    private Devise devise;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -1,18 +1,21 @@
 package com.pfe.facturation.service;
 
 import com.pfe.facturation.dto.ClientDTO;
+import com.pfe.facturation.entity.CategorieClient;
 import com.pfe.facturation.entity.Client;
+import com.pfe.facturation.entity.Devise;
+import com.pfe.facturation.entity.Vendeur;
 import com.pfe.facturation.exception.ResourceNotFoundException;
+import com.pfe.facturation.repository.CategorieClientRepository;
 import com.pfe.facturation.repository.ClientRepository;
+import com.pfe.facturation.repository.DeviseRepository;
+import com.pfe.facturation.repository.VendeurRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-
-import com.pfe.facturation.repository.CategorieClientRepository;
-import com.pfe.facturation.entity.CategorieClient;
 
 @Service
 @Transactional
@@ -22,10 +25,17 @@ public class ClientService {
 
     private final ClientRepository clientRepository;
     private final CategorieClientRepository categoryRepository;
+    private final VendeurRepository vendeurRepository;
+    private final DeviseRepository deviseRepository;
 
-    public ClientService(ClientRepository clientRepository, CategorieClientRepository categoryRepository) {
+    public ClientService(ClientRepository clientRepository,
+                         CategorieClientRepository categoryRepository,
+                         VendeurRepository vendeurRepository,
+                         DeviseRepository deviseRepository) {
         this.clientRepository = clientRepository;
         this.categoryRepository = categoryRepository;
+        this.vendeurRepository = vendeurRepository;
+        this.deviseRepository = deviseRepository;
     }
 
     // ===== Lecture =====
@@ -83,10 +93,28 @@ public class ClientService {
         existing.setIce(dto.ice());
 
         if (dto.categorieIds() != null && !dto.categorieIds().isEmpty()) {
-            java.util.List<CategorieClient> categories = categoryRepository.findAllById(dto.categorieIds());
+            List<CategorieClient> categories = categoryRepository.findAllById(dto.categorieIds());
             existing.setCategories(categories);
         } else {
             existing.setCategories(null);
+        }
+
+        // Vendeur (optionnel)
+        if (dto.vendeurId() != null) {
+            Vendeur vendeur = vendeurRepository.findById(dto.vendeurId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Vendeur introuvable : " + dto.vendeurId()));
+            existing.setVendeur(vendeur);
+        } else {
+            existing.setVendeur(null);
+        }
+
+        // Devise (optionnel)
+        if (dto.deviseId() != null) {
+            Devise devise = deviseRepository.findById(dto.deviseId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Devise introuvable : " + dto.deviseId()));
+            existing.setDevise(devise);
+        } else {
+            existing.setDevise(null);
         }
 
         Client saved = clientRepository.save(existing);
@@ -115,7 +143,14 @@ public class ClientService {
                 c.getCodePostal(),
                 c.getPays(),
                 c.getIce(),
-                c.getCategories() != null ? c.getCategories().stream().map(CategorieClient::getId).toList() : null
+                c.getCategories() != null ? c.getCategories().stream().map(CategorieClient::getId).toList() : null,
+                // Vendeur
+                c.getVendeur() != null ? c.getVendeur().getId() : null,
+                c.getVendeur() != null ? (c.getVendeur().getPrenom() + " " + c.getVendeur().getNom()) : null,
+                // Devise
+                c.getDevise() != null ? c.getDevise().getId() : null,
+                c.getDevise() != null ? c.getDevise().getCode() : null,
+                c.getDevise() != null ? c.getDevise().getSymbole() : null
         );
     }
 
@@ -132,8 +167,22 @@ public class ClientService {
                 .build();
 
         if (dto.categorieIds() != null && !dto.categorieIds().isEmpty()) {
-            java.util.List<CategorieClient> categories = categoryRepository.findAllById(dto.categorieIds());
+            List<CategorieClient> categories = categoryRepository.findAllById(dto.categorieIds());
             client.setCategories(categories);
+        }
+
+        // Vendeur (optionnel)
+        if (dto.vendeurId() != null) {
+            Vendeur vendeur = vendeurRepository.findById(dto.vendeurId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Vendeur introuvable : " + dto.vendeurId()));
+            client.setVendeur(vendeur);
+        }
+
+        // Devise (optionnel)
+        if (dto.deviseId() != null) {
+            Devise devise = deviseRepository.findById(dto.deviseId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Devise introuvable : " + dto.deviseId()));
+            client.setDevise(devise);
         }
 
         return client;
