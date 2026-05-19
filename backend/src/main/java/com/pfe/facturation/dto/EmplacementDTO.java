@@ -14,8 +14,7 @@ public record EmplacementDTO(
         @NotBlank(message = "La zone est obligatoire")
         String zone,
 
-        String rayon,
-        String etagere,
+        String description,
 
         @NotNull(message = "Le site est obligatoire")
         Long siteId,

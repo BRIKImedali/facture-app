@@ -153,8 +153,7 @@ public class StockService {
             emplacementId = e.getId();
             emplacementLabel = String.join(" / ",
                     e.getZone() != null ? e.getZone() : "",
-                    e.getRayon() != null ? e.getRayon() : "",
-                    e.getEtagere() != null ? e.getEtagere() : ""
+                    e.getDescription() != null ? e.getDescription() : ""
             ).replaceAll("( / )+$", "").trim();
         }
 

@@ -43,7 +43,7 @@ export default function EmplacementPage() {
   useEffect(() => { load(); }, [load]);
 
   const filtered = emplacements.filter(e => {
-    const text = [e.zone, e.rayon, e.etagere].some(v => v?.toLowerCase().includes(searchQuery.toLowerCase()));
+    const text = [e.zone, e.description].some(v => v?.toLowerCase().includes(searchQuery.toLowerCase()));
     const siteMatch = !filterSite || String(e.siteId) === filterSite;
     return text && siteMatch;
   });
@@ -121,8 +121,7 @@ export default function EmplacementPage() {
               <TableHead sx={{ bgcolor: '#f8fafc' }}>
                 <TableRow>
                   <TableCell><b>Zone</b></TableCell>
-                  <TableCell><b>Rayon</b></TableCell>
-                  <TableCell><b>Étagère</b></TableCell>
+                  <TableCell><b>Description</b></TableCell>
                   <TableCell><b>Site</b></TableCell>
                   <TableCell align="right"><b>Actions</b></TableCell>
                 </TableRow>
@@ -131,8 +130,7 @@ export default function EmplacementPage() {
                 {paginatedEmplacements.map((e) => (
                   <TableRow key={e.id} hover>
                     <TableCell><Typography variant="body2" sx={{ fontWeight: 'bold', color: '#1e293b' }}>{e.zone}</Typography></TableCell>
-                    <TableCell>{e.rayon || '-'}</TableCell>
-                    <TableCell>{e.etagere || '-'}</TableCell>
+                    <TableCell>{e.description || '-'}</TableCell>
                     <TableCell>
                       <Chip label={e.siteNom} size="small" color="info" variant="outlined" sx={{ fontWeight: 500 }} />
                     </TableCell>
@@ -159,7 +157,7 @@ export default function EmplacementPage() {
                 ))}
                 {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} align="center">Aucun emplacement trouvé</TableCell>
+                    <TableCell colSpan={4} align="center">Aucun emplacement trouvé</TableCell>
                   </TableRow>
                 )}
               </TableBody>

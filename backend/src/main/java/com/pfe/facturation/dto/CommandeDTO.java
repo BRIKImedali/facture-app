@@ -18,6 +18,7 @@ public record CommandeDTO(
         BigDecimal totalHT_apres_remise,
         BigDecimal totalTva,
         BigDecimal totalTTC,
+        String paymentMethod,          
         List<LigneCommandeDTO> lignes
 ) {
     public record LigneCommandeDTO(

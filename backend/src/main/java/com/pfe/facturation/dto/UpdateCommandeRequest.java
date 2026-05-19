@@ -11,13 +11,15 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * DTO de mise à jour complète d'une commande (lignes, remise, notes, date).
+ * DTO de mise à jour complète d'une commande (lignes, remise, notes, date, mode de paiement).
  * Utilisable uniquement si statut = EN_ATTENTE.
  */
 public record UpdateCommandeRequest(
         LocalDate dateCommande,
         String notes,
         @DecimalMin(value = "0.0") @DecimalMax(value = "100.0") BigDecimal remise,
+        /** Mode de paiement : ESPECES, VIREMENT, CHEQUE. Optionnel. */
+        String paymentMethod,          // ← NOUVEAU
         @NotEmpty(message = "La commande doit contenir au moins une ligne") List<LigneCommandeRequest> lignes
 ) {
     public record LigneCommandeRequest(

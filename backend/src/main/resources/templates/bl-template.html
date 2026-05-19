@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Bon de Livraison PDF</title>
+    <style>
+        body { font-family: 'Helvetica', 'Arial', sans-serif; font-size: 14px; color: #333; margin: 40px; }
+        .info-table { width: 100%; margin-bottom: 40px; }
+        .info-table td { vertical-align: top; width: 50%; }
+        .logo-text { font-size: 24px; font-weight: bold; color: #6366f1; }
+        .title { font-size: 20px; font-weight: bold; text-transform: uppercase; margin-bottom: 20px; color: #1e293b; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .badge-brouillon { background: #e2e8f0; color: #64748b; }
+        .badge-en_cours  { background: #dbeafe; color: #1d4ed8; }
+        .badge-livre     { background: #dcfce7; color: #15803d; }
+        .badge-annule    { background: #fee2e2; color: #b91c1c; }
+        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+        .items-table th { background-color: #f8fafc; color: #64748b; text-align: left; padding: 10px; border-bottom: 2px solid #e2e8f0; font-size: 12px; text-transform: uppercase; }
+        .items-table td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
+        .totals-table { width: 40%; float: right; border-collapse: collapse; }
+        .totals-table td { padding: 8px; text-align: right; }
+        .totals-table .total-ttc { font-weight: bold; font-size: 16px; border-top: 2px solid #e2e8f0; color: #6366f1; }
+        .footer { position: fixed; bottom: 30px; left: 40px; right: 40px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 15px; }
+        .signature-box { margin-top: 60px; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+        .signature-grid { width: 100%; }
+        .signature-grid td { width: 50%; padding: 10px; }
+    </style>
+</head>
+<body>
+
+    <table class="info-table">
+        <tr>
+            <td>
+                <div class="logo-text">FACTURAPRO</div>
+                <p>123 Avenue Habib Bourguiba<br/>1000 Tunis, Tunisie<br/>Email: contact@facturapro.tn</p>
+            </td>
+            <td style="text-align: right;">
+                <div class="title" th:text="'BON DE LIVRAISON N° ' + ${bl.numero}">BON DE LIVRAISON</div>
+                <p>
+                    <strong>Date de création :</strong> <span th:text="${dateCreationFormatee}">...</span><br/>
+                    <strong>Date de livraison :</strong> <span th:text="${bl.dateLivraison != null ? bl.dateLivraison : '—'}">...</span><br/>
+                    <strong>Statut :</strong>
+                    <span th:classappend="'badge badge-' + ${bl.statut != null ? bl.statut.toLowerCase() : ''}"
+                          th:text="${bl.statut}">BROUILLON</span>
+                    <br/>
+                    <span th:if="${bl.commandeReference != null}">
+                        <strong>Commande :</strong> <span th:text="${bl.commandeReference}">REF</span>
+                    </span>
+                </p>
+            </td>
+        </tr>
+    </table>
+
+    <table class="info-table" style="margin-top: 20px;">
+        <tr>
+            <td>
+                <strong>Livré à :</strong><br/>
+                <span th:text="${bl.client.nom}">Nom Client</span><br/>
+                <span th:text="${bl.client.adresse}">Adresse</span><br/>
+                <span th:text="${bl.client.ville}">Ville</span><br/>
+                <span th:if="${bl.client.ice != null}">ICE: <span th:text="${bl.client.ice}">...</span></span>
+            </td>
+            <td></td>
+        </tr>
+    </table>
+
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th>Désignation</th>
+                <th style="text-align: center;">Qté</th>
+                <th style="text-align: right;">Prix HT</th>
+                <th style="text-align: center;">TVA %</th>
+                <th style="text-align: right;">Montant TTC</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="ligne : ${bl.lignes}">
+                <td th:text="${ligne.designation}">Désignation</td>
+                <td style="text-align: center;" th:text="${ligne.quantite}">1</td>
+                <td style="text-align: right;" th:text="${#numbers.formatDecimal(ligne.prixUnitaireHT, 1, 3)}">0.000</td>
+                <td style="text-align: center;" th:text="${ligne.tauxTva + '%'}">0%</td>
+                <td style="text-align: right;" th:text="${#numbers.formatDecimal(ligne.montantTTC, 1, 3)}">0.000</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="totals-container">
+        <table class="totals-table">
+            <tr>
+                <td>Total HT :</td>
+                <td th:text="${#numbers.formatDecimal(bl.totalHT, 1, 3) + ' TND'}">0.000 TND</td>
+            </tr>
+            <tr>
+                <td>Total TVA :</td>
+                <td th:text="${#numbers.formatDecimal(bl.totalTva, 1, 3) + ' TND'}">0.000 TND</td>
+            </tr>
+            <tr class="total-ttc">
+                <td>Total TTC :</td>
+                <td th:text="${#numbers.formatDecimal(bl.totalTTC, 1, 3) + ' TND'}">0.000 TND</td>
+            </tr>
+        </table>
+    </div>
+
+    <div style="clear:both;"></div>
+
+    <div th:if="${bl.notes != null and !#strings.isEmpty(bl.notes)}" style="margin-top: 30px;">
+        <strong>Notes :</strong>
+        <p th:text="${bl.notes}">Notes...</p>
+    </div>
+
+    <div class="signature-box">
+        <table class="signature-grid">
+            <tr>
+                <td>
+                    <strong>Signature du livreur</strong>
+                    <div style="height: 60px; border-bottom: 1px solid #cbd5e1; margin-top: 10px;"></div>
+                </td>
+                <td>
+                    <strong>Signature du client (bon pour réception)</strong>
+                    <div style="height: 60px; border-bottom: 1px solid #cbd5e1; margin-top: 10px;"></div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="footer">
+        <span th:text="'Bon de livraison ' + ${bl.numero} + ' — FACTURAPRO'">BL</span>
+    </div>
+
+</body>
+</html>

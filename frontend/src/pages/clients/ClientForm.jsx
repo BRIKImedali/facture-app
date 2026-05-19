@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { clientService } from '../../services/clientService';
 import { categorieClientService } from '../../services/categorieClientService';
 import { vendeurService } from '../../services/vendeurService';
 import { deviseService } from '../../services/deviseService';
+import SearchableSelect from '../../components/SearchableSelect';
 
 const ClientForm = () => {
   const { id } = useParams();
@@ -16,11 +17,9 @@ const ClientForm = () => {
   const [vendeurs, setVendeurs] = useState([]);
   const [devises, setDevises] = useState([]);
 
-  const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting } } = useForm({
-    defaultValues: { pays: 'Maroc', categorieIds: [], vendeurId: null, deviseId: null }
+  const { register, handleSubmit, reset, setValue, watch, control, formState: { errors, isSubmitting } } = useForm({
+    defaultValues: { pays: 'Maroc', categorieId: '', vendeurId: '', deviseId: '' }
   });
-
-  const selectedCategories = watch('categorieIds') || [];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -37,9 +36,9 @@ const ClientForm = () => {
         if (isEdit) {
           const clientRes = await clientService.getById(id);
           const clientData = clientRes.data;
-          // Extract category IDs if they exist
-          if (clientData.categories) {
-            clientData.categorieIds = clientData.categories.map(c => c.id);
+          // Extract category ID if it exists
+          if (clientData.categorieId) {
+            clientData.categorieId = clientData.categorieId;
           }
           reset(clientData);
         }
@@ -57,6 +56,7 @@ const ClientForm = () => {
       // Convert empty strings to null for optional FK fields
       const payload = {
         ...data,
+        categorieId: data.categorieId ? Number(data.categorieId) : null,
         vendeurId: data.vendeurId ? Number(data.vendeurId) : null,
         deviseId: data.deviseId ? Number(data.deviseId) : null,
       };
@@ -149,62 +149,59 @@ const ClientForm = () => {
                   Aucune catégorie disponible
                 </div>
               ) : (
-                <select
-                  className="form-control"
-                  multiple
-                  size={Math.min(categories.length, 5)}
-                  value={selectedCategories.map(String)}
-                  onChange={(e) => {
-                    const selected = Array.from(e.target.selectedOptions, opt => parseInt(opt.value));
-                    setValue('categorieIds', selected, { shouldDirty: true });
-                  }}
-                  style={{ height: 'auto', padding: '4px' }}
-                >
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.nom}
-                    </option>
-                  ))}
-                </select>
+                <Controller
+                  name="categorieId"
+                  control={control}
+                  render={({ field }) => (
+                    <SearchableSelect
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                      options={categories}
+                      valueKey="id"
+                      labelKey="nom"
+                      placeholder="— Sélectionner une catégorie —"
+                    />
+                  )}
+                />
               )}
-              <span style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '4px', display: 'block' }}>
-                Maintenez <kbd style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '3px', padding: '0 4px', fontSize: '0.75rem' }}>Ctrl</kbd> pour sélectionner plusieurs catégories
-              </span>
             </div>
 
             {/* ── Vendeur (optionnel) ── */}
             <div className="form-group">
               <label>Vendeur <span style={{ color: '#94a3b8', fontWeight: 400 }}>(optionnel)</span></label>
-              <select
-                {...register('vendeurId')}
-                className="form-control"
-                defaultValue=""
-              >
-                <option value="">— Aucun vendeur —</option>
-                {vendeurs.map(v => (
-                  <option key={v.id} value={v.id}>
-                    {v.prenom} {v.nom}
-                    {v.matriculeInterne ? ` (${v.matriculeInterne})` : ''}
-                  </option>
-                ))}
-              </select>
+              <Controller
+                name="vendeurId"
+                control={control}
+                render={({ field }) => (
+                  <SearchableSelect
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                    options={vendeurs}
+                    valueKey="id"
+                    renderLabel={v => `${v.prenom} ${v.nom}${v.matriculeInterne ? ` (${v.matriculeInterne})` : ''}`}
+                    placeholder="— Aucun vendeur —"
+                  />
+                )}
+              />
             </div>
 
             {/* ── Devise (optionnel) ── */}
             <div className="form-group">
               <label>Devise <span style={{ color: '#94a3b8', fontWeight: 400 }}>(optionnel)</span></label>
-              <select
-                {...register('deviseId')}
-                className="form-control"
-                defaultValue=""
-              >
-                <option value="">— Aucune devise —</option>
-                {devises.map(d => (
-                  <option key={d.id} value={d.id}>
-                    {d.symbole} — {d.code} — {d.nom}
-                  </option>
-                ))}
-              </select>
+              <Controller
+                name="deviseId"
+                control={control}
+                render={({ field }) => (
+                  <SearchableSelect
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                    options={devises}
+                    valueKey="id"
+                    renderLabel={d => `${d.symbole} — ${d.code} — ${d.nom}`}
+                    placeholder="— Aucune devise —"
+                  />
+                )}
+              />
             </div>
           </div>
 

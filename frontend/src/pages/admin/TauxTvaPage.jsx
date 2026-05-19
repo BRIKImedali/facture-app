@@ -205,7 +205,6 @@ const TauxTvaPage = () => {
             <Table>
               <TableHead sx={{ bgcolor: '#f8fafc' }}>
                 <TableRow>
-                  <TableCell><b>ID</b></TableCell>
                   <TableCell><b>Taux (%)</b></TableCell>
                   <TableCell><b>Description</b></TableCell>
                   <TableCell><b>Statut</b></TableCell>
@@ -215,7 +214,6 @@ const TauxTvaPage = () => {
               <TableBody>
                 {paginatedList.map((taux) => (
                   <TableRow key={taux.id} hover>
-                    <TableCell>{taux.id}</TableCell>
                     <TableCell>
                       <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#4f46e5' }}>
                         {taux.valeur}%
@@ -254,7 +252,7 @@ const TauxTvaPage = () => {
                 ))}
                 {filteredList.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 4, color: '#94a3b8' }}>
+                    <TableCell colSpan={4} align="center" sx={{ py: 4, color: '#94a3b8' }}>
                       Aucun taux TVA trouvé
                     </TableCell>
                   </TableRow>

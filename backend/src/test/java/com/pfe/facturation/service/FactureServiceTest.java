@@ -4,6 +4,7 @@ import com.pfe.facturation.dto.CreateFactureRequest;
 import com.pfe.facturation.dto.UpdateStatutRequest;
 import com.pfe.facturation.entity.*;
 import com.pfe.facturation.exception.ResourceNotFoundException;
+import com.pfe.facturation.repository.BonLivraisonRepository;
 import com.pfe.facturation.repository.ClientRepository;
 import com.pfe.facturation.repository.FactureRepository;
 import com.pfe.facturation.repository.ProduitRepository;
@@ -35,6 +36,7 @@ class FactureServiceTest {
     @Mock private FactureRepository factureRepository;
     @Mock private ClientRepository clientRepository;
     @Mock private ProduitRepository produitRepository;
+    @Mock private BonLivraisonRepository bonLivraisonRepository;
     @Mock private ClientService clientService;
 
     @InjectMocks
@@ -155,7 +157,7 @@ class FactureServiceTest {
         when(clientRepository.findById(99L)).thenReturn(Optional.empty());
 
         CreateFactureRequest request = new CreateFactureRequest(
-                99L, LocalDate.now().plusDays(30), "Test", null,
+                99L, LocalDate.now().plusDays(30), "Test", null, null,
                 List.of(new CreateFactureRequest.LigneRequest(null, "Service A", 1, new BigDecimal("500.00"), 19.0))
         );
 
@@ -172,7 +174,7 @@ class FactureServiceTest {
         when(clientService.toDTO(any())).thenReturn(null);
 
         CreateFactureRequest request = new CreateFactureRequest(
-                1L, null, null, null,
+                1L, null, null, null, null,
                 List.of(
                         // 2 unités × 100 TND HT @ 19% TVA = 200 HT + 38 TVA = 238 TTC
                         new CreateFactureRequest.LigneRequest(null, "Conseil", 2, new BigDecimal("100.00"), 19.0)

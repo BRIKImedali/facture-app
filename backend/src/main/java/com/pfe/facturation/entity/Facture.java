@@ -66,6 +66,11 @@ public class Facture {
     @Column(name = "payment_method", length = 20)
     private PaymentMethod paymentMethod;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type_facture", length = 20)
+    @Builder.Default
+    private TypeFacture type = TypeFacture.CLASSIQUE;
+
     /** Date de création / émission de la facture */
     @Column(nullable = false, updatable = false)
     private LocalDateTime dateEmission;

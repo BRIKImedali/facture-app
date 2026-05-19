@@ -162,7 +162,6 @@ const UnitesPage = () => {
             <Table>
               <TableHead sx={{ bgcolor: '#f8fafc' }}>
                 <TableRow>
-                  <TableCell><b>ID</b></TableCell>
                   <TableCell><b>Nom</b></TableCell>
                   <TableCell><b>Description</b></TableCell>
                   <TableCell align="right"><b>Actions</b></TableCell>
@@ -171,7 +170,6 @@ const UnitesPage = () => {
               <TableBody>
                 {paginatedUnites.map((unite) => (
                   <TableRow key={unite.id} hover>
-                    <TableCell>{unite.id}</TableCell>
                     <TableCell>{unite.nom}</TableCell>
                     <TableCell>{unite.description || '-'}</TableCell>
                     <TableCell align="right">
@@ -194,7 +192,7 @@ const UnitesPage = () => {
                 ))}
                 {filteredUnites.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} align="center">Aucune unité trouvée</TableCell>
+                    <TableCell colSpan={3} align="center">Aucune unité trouvée</TableCell>
                   </TableRow>
                 )}
               </TableBody>

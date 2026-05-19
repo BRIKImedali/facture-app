@@ -21,7 +21,8 @@ public record FactureResponseDTO(
         BigDecimal totalHT_apres_remise,
         BigDecimal totalTva,
         BigDecimal totalTTC,
-        String paymentMethod
+        String paymentMethod,
+        String type
 ) {
 
     /** DTO d'une ligne de facture dans la réponse */
@@ -37,7 +38,4 @@ public record FactureResponseDTO(
             Long produitId
     ) {}
 
-    public String getNumero() {
-        return null;
-    }
 }

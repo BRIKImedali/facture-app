@@ -17,7 +17,9 @@ public record ClientDTO(
         String codePostal,
         String pays,
         String ice,
-        java.util.List<Long> categorieIds,
+        // Catégorie
+        Long categorieId,
+        String categorieNom,
         // Vendeur (optionnel)
         Long vendeurId,
         String vendeurNom,

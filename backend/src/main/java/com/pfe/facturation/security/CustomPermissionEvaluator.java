@@ -51,12 +51,12 @@ public class CustomPermissionEvaluator implements PermissionEvaluator {
 
         // L'utilisateur avec le rôle système ADMIN a toutes les permissions
         if (com.pfe.facturation.security.entity.Role.ADMIN.equals(user.getRole())) {
-            // Vérifier via appRoles si le rôle SUPER_ADMIN est assigné
-            boolean isSuperAdmin = user.getAppRoles() != null &&
+            // Vérifier via appRoles si le rôle SUPER_ADMIN ou ADMIN est assigné
+            boolean isAdminOrSuperAdmin = user.getAppRoles() != null &&
                 user.getAppRoles().stream()
-                    .anyMatch(r -> "SUPER_ADMIN".equals(r.getName()));
-            if (isSuperAdmin) {
-                log.debug("Permission accordée : utilisateur SUPER_ADMIN");
+                    .anyMatch(r -> "SUPER_ADMIN".equals(r.getName()) || "ADMIN".equals(r.getName()));
+            if (isAdminOrSuperAdmin) {
+                log.debug("Permission accordée : utilisateur SUPER_ADMIN ou ADMIN");
                 return true;
             }
         }

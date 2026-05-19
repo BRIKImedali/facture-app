@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box, Button, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Tooltip, CircularProgress,
-  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, Chip
+  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, Chip,
+  TextField, InputAdornment
 } from '@mui/material';
-import { Add as AddIcon, Visibility as VisibilityIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Add as AddIcon, Visibility as VisibilityIcon, Delete as DeleteIcon, Search as SearchIcon } from '@mui/icons-material';
 
 import { devisService } from '../../services/devisService';
 import Pagination from '../../components/Pagination';
@@ -16,6 +17,7 @@ const DevisList = () => {
   const [devisList, setDevisList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedStatut, setSelectedStatut] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -76,8 +78,16 @@ const DevisList = () => {
     }
   };
 
-  const totalPages = Math.ceil(devisList.length / itemsPerPage);
-  const paginatedDevis = devisList.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const filteredDevis = devisList.filter(d => {
+    const term = searchTerm.toLowerCase();
+    return (
+      d.reference?.toLowerCase().includes(term) ||
+      d.client?.nom?.toLowerCase().includes(term)
+    );
+  });
+
+  const totalPages = Math.ceil(filteredDevis.length / itemsPerPage);
+  const paginatedDevis = filteredDevis.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -93,10 +103,28 @@ const DevisList = () => {
         </Button>
       </Box>
 
+      <Box sx={{ mb: 2 }}>
+        <TextField
+          fullWidth
+          size="small"
+          placeholder="Rechercher par référence ou client..."
+          value={searchTerm}
+          onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ maxWidth: 400 }}
+        />
+      </Box>
+
       <Box sx={{ mb: 3, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
         {STATUTS.map(s => (
-          <Button 
-            key={s} 
+          <Button
+            key={s}
             variant={selectedStatut === s ? 'contained' : 'outlined'}
             onClick={() => handleStatutChange(s)}
             size="small"
@@ -160,7 +188,7 @@ const DevisList = () => {
                     </TableCell>
                   </TableRow>
                 ))}
-                {devisList.length === 0 && (
+                {filteredDevis.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} align="center">Aucun devis trouvé</TableCell>
                   </TableRow>
@@ -169,7 +197,7 @@ const DevisList = () => {
             </Table>
           </TableContainer>
           
-          {devisList.length > 0 && (
+          {filteredDevis.length > 0 && (
             <Box sx={{ mt: 2 }}>
               <Pagination
                 currentPage={currentPage}

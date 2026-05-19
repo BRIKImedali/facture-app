@@ -8,6 +8,7 @@ import { produitService } from '../../services/produitService';
 import { devisService } from '../../services/devisService';
 import { commandeService } from '../../services/commandeService';
 import { tauxTvaService } from '../../services/tauxTvaService';
+import SearchableSelect from '../../components/SearchableSelect';
 
 const CommandeCreate = () => {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ const CommandeCreate = () => {
   const [dateCommande, setDateCommande] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
   const [remise, setRemise] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState('');
   const [lignes, setLignes] = useState([
     { produitId: '', designation: '', quantite: 1, prixUnitaireHT: '', tauxTva: 19 }
   ]);
@@ -113,6 +115,7 @@ const CommandeCreate = () => {
         dateCommande: dateCommande || null,
         notes,
         remise: remisePct > 0 ? remisePct : null,
+        paymentMethod: paymentMethod || null,
         lignes: lignes.map(l => ({
           produitId: l.produitId ? parseInt(l.produitId) : null,
           designation: l.designation,
@@ -146,26 +149,41 @@ const CommandeCreate = () => {
           <div className="form-grid">
             <div className="form-group">
               <label>Client *</label>
-              <select value={clientId} onChange={e => setClientId(e.target.value)} className="form-control" required>
-                <option value="">— Sélectionner un client —</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.nom} {c.email ? `(${c.email})` : ''}</option>)}
-              </select>
+              <SearchableSelect
+                value={clientId}
+                onChange={setClientId}
+                options={clients}
+                valueKey="id"
+                renderLabel={c => `${c.nom}${c.email ? ` (${c.email})` : ''}`}
+                placeholder="— Sélectionner un client —"
+                required
+              />
             </div>
-            
+
             <div className="form-group">
               <label>Vendeur *</label>
-              <select value={vendeurId} onChange={e => setVendeurId(e.target.value)} className="form-control" required>
-                <option value="">— Sélectionner un vendeur —</option>
-                {vendeurs.map(v => <option key={v.id} value={v.id}>{v.nom} {v.prenom}</option>)}
-              </select>
+              <SearchableSelect
+                value={vendeurId}
+                onChange={setVendeurId}
+                options={vendeurs}
+                valueKey="id"
+                renderLabel={v => `${v.nom} ${v.prenom}`}
+                placeholder="— Sélectionner un vendeur —"
+                required
+              />
             </div>
-            
+
             <div className="form-group">
               <label>Site *</label>
-              <select value={siteId} onChange={e => setSiteId(e.target.value)} className="form-control" required>
-                <option value="">— Sélectionner un site —</option>
-                {sites.map(s => <option key={s.id} value={s.id}>{s.nom} ({s.ville})</option>)}
-              </select>
+              <SearchableSelect
+                value={siteId}
+                onChange={setSiteId}
+                options={sites}
+                valueKey="id"
+                renderLabel={s => `${s.nom} (${s.ville})`}
+                placeholder="— Sélectionner un site —"
+                required
+              />
             </div>
 
             <div className="form-group">
@@ -175,10 +193,14 @@ const CommandeCreate = () => {
             
             <div className="form-group">
               <label>Devis associé (Optionnel)</label>
-              <select value={devisId} onChange={e => setDevisId(e.target.value)} className="form-control">
-                <option value="">— Aucun devis —</option>
-                {devisList.map(d => <option key={d.id} value={d.id}>{d.reference} - {d.client?.nom}</option>)}
-              </select>
+              <SearchableSelect
+                value={devisId}
+                onChange={setDevisId}
+                options={devisList}
+                valueKey="id"
+                renderLabel={d => `${d.reference} - ${d.client?.nom || ''}`}
+                placeholder="— Aucun devis —"
+              />
             </div>
 
             <div className="form-group">
@@ -186,6 +208,16 @@ const CommandeCreate = () => {
               <input type="number" min="0" max="100" step="0.5" value={remise}
                 onChange={e => setRemise(e.target.value)} className="form-control"
                 placeholder="0 = aucune remise" />
+            </div>
+
+            <div className="form-group">
+              <label>Mode de paiement</label>
+              <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="form-control">
+                <option value="">— Aucun / À définir —</option>
+                <option value="ESPECES">Espèces</option>
+                <option value="VIREMENT">Virement bancaire</option>
+                <option value="CHEQUE">Chèque</option>
+              </select>
             </div>
 
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
@@ -221,11 +253,14 @@ const CommandeCreate = () => {
                 return (
                   <tr key={i}>
                     <td>
-                      <select value={l.produitId} onChange={e => handleProduitChange(i, e.target.value)}
-                        className="form-control">
-                        <option value="">— Manuel —</option>
-                        {produits.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-                      </select>
+                      <SearchableSelect
+                        value={l.produitId}
+                        onChange={val => handleProduitChange(i, val)}
+                        options={produits}
+                        valueKey="id"
+                        labelKey="nom"
+                        placeholder="— Manuel —"
+                      />
                     </td>
                     <td>
                       <input value={l.designation} onChange={e => handleLigneChange(i, 'designation', e.target.value)}

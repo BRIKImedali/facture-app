@@ -135,7 +135,7 @@ const ClientList = () => {
                   <TableCell><b>Ville</b></TableCell>
                   <TableCell><b>Vendeur</b></TableCell>
                   <TableCell><b>Devise</b></TableCell>
-                  <TableCell><b>Catégories</b></TableCell>
+                  <TableCell><b>Catégorie</b></TableCell>
                   <TableCell align="right"><b>Actions</b></TableCell>
                 </TableRow>
               </TableHead>
@@ -165,9 +165,9 @@ const ClientList = () => {
                       ) : '-'}
                     </TableCell>
                     <TableCell>
-                      {client.categorieIds && client.categorieIds.length > 0 ? (
+                      {client.categorieNom ? (
                         <Chip
-                          label={`${client.categorieIds.length} catégorie${client.categorieIds.length > 1 ? 's' : ''}`}
+                          label={client.categorieNom}
                           size="small"
                           sx={{ bgcolor: '#e0e7ff', color: '#3730a3', fontWeight: 500, height: '22px', fontSize: '0.75rem' }}
                         />

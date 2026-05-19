@@ -1,0 +1,88 @@
+# Contexte du projet
+Je travaille sur une application Spring Boot (backend REST API) + React (frontend).
+J'ai déjà un module Commerce existant avec gestion des commandes et facturation.
+Je veux étendre ce module avec deux nouvelles fonctionnalités liées.
+
+---
+
+# FONCTIONNALITÉ 1 — Bons de livraison (BL)
+
+## Objectif
+Ajouter un système complet de bons de livraison rattachés aux commandes existantes.
+
+## Backend (Spring Boot)
+- Créer l'entité `BonLivraison` avec les champs :
+  - id, numéro BL (auto-généré ex: BL-2025-0001), date de création
+  - statut : BROUILLON, EN_COURS, LIVRÉ, ANNULÉ
+  - référence vers la commande source (relation ManyToOne vers Commande)
+  - référence vers le client (déduite de la commande)
+  - lignes de livraison (produit, quantité livrée)
+  - date de livraison effective, notes/commentaires
+- Créer le repository, service et controller REST pour :
+  - POST /api/bons-livraison — créer un BL depuis une commande
+  - GET /api/bons-livraison — lister tous les BL (avec filtres client, statut, date)
+  - GET /api/bons-livraison/{id} — détail d'un BL
+  - PUT /api/bons-livraison/{id}/statut — changer le statut
+  - GET /api/bons-livraison/{id}/pdf — générer et télécharger le PDF du BL
+- Pour le PDF, utiliser la librairie iText ou JasperReports (celle déjà présente dans le projet, sinon iText7)
+- Le PDF doit contenir : logo/entête, infos client, tableau des articles livrés, statut, date, numéro BL, signature
+
+## Frontend (React)
+- Page liste des BL avec tableau filtrable (par client, statut, date)
+- Bouton "Créer un BL" depuis la page détail d'une commande
+- Formulaire de création : sélection des lignes de commande à inclure, quantités livrées, date, notes
+- Badge coloré pour chaque statut (BROUILLON=gris, EN_COURS=bleu, LIVRÉ=vert, ANNULÉ=rouge)
+- Bouton "Changer statut" avec menu déroulant
+- Bouton "Télécharger PDF" qui appelle l'endpoint PDF
+
+---
+
+# FONCTIONNALITÉ 2 — Facturation groupée par BL
+
+## Objectif
+Permettre à l'utilisateur de créer une facture en sélectionnant manuellement plusieurs bons
+de livraison d'un même client. La facture consolide tous les articles des BL sélectionnés.
+
+## Backend (Spring Boot)
+- Modifier ou étendre l'entité `Facture` pour ajouter :
+  - une relation vers les BL sources (ManyToMany ou OneToMany vers BonLivraison)
+  - un champ `type` : CLASSIQUE ou GROUPEE_BL
+- Ajouter un endpoint :
+  - POST /api/factures/depuis-bons-livraison
+    Body : { clientId, bonLivraisonIds: [id1, id2, ...], dateEcheance, notes }
+    Logique : récupérer tous les BL sélectionnés, vérifier qu'ils appartiennent tous
+    au même client et sont au statut LIVRÉ, consolider les lignes (regrouper par produit
+    si même référence), calculer totaux HT/TVA/TTC, créer la facture
+- Marquer les BL utilisés comme "facturé" (ajouter champ `facture` sur BonLivraison)
+- Endpoint GET /api/bons-livraison/facturables?clientId={id} — retourne les BL
+  livrés et non encore facturés pour un client donné
+
+## Frontend (React)
+- Dans la page de création de facture, ajouter un mode "Facturer des bons de livraison"
+- Étape 1 : sélectionner le client
+- Étape 2 : afficher la liste des BL livrés et non facturés de ce client,
+  avec cases à cocher pour sélection multiple (afficher : numéro BL, date, montant, commande source)
+- Étape 3 : prévisualisation de la facture consolidée avant confirmation
+- Bouton "Générer la facture" qui appelle le backend
+- Une fois la facture créée, les BL sélectionnés doivent afficher un badge "Facturé"
+  avec un lien vers la facture générée
+
+---
+
+# Contraintes importantes
+- Respecter l'architecture existante du projet (packages, conventions de nommage, structure)
+- Commence par analyser la structure actuelle du module commerce avant de coder
+- Utilise les DTOs et MapStruct si déjà utilisés dans le projet
+- Gestion des erreurs : retourner des messages clairs si un BL est déjà facturé,
+  si le client ne correspond pas, etc.
+- Ajoute les migrations Flyway ou Liquibase si déjà utilisées dans le projet
+
+---
+
+# Par où commencer
+1. Analyse d'abord la structure du projet (entités existantes, packages, dépendances pom.xml)
+2. Commence par le backend : entité → repository → service → controller
+3. Ensuite le frontend : composants React page par page
+4. Génère les fichiers un par un et explique chaque choix
+
+Demande-moi si tu as besoin de voir un fichier existant avant de commencer.

@@ -223,6 +223,10 @@ public class RoleService {
             {"DEVIS", "UPDATE", "Modifier des devis"},
             {"DEVIS", "DELETE", "Supprimer des devis"},
             {"DEVIS", "EXPORT", "Exporter des devis"},
+            {"BON_LIVRAISON", "CREATE", "Créer des bons de livraison"},
+            {"BON_LIVRAISON", "READ", "Voir les bons de livraison"},
+            {"BON_LIVRAISON", "UPDATE", "Modifier le statut des bons de livraison"},
+            {"BON_LIVRAISON", "DELETE", "Supprimer des bons de livraison"},
             {"SYSTEM", "CONFIG", "Configurer le système (admin)"},
             {"SYSTEM", "AUDIT", "Voir les logs d'audit"},
         };
@@ -259,6 +263,7 @@ public class RoleService {
         managerPerms.addAll(permissionRepository.findByEntity("PRODUIT"));
         managerPerms.addAll(permissionRepository.findByEntity("COMMANDE"));
         managerPerms.addAll(permissionRepository.findByEntity("DEVIS"));
+        managerPerms.addAll(permissionRepository.findByEntity("BON_LIVRAISON"));
         // Devise : CREATE + READ + UPDATE (pas DELETE — réservé à ADMIN)
         permissionRepository.findByEntityAndAction("DEVISE", "READ").ifPresent(managerPerms::add);
         permissionRepository.findByEntityAndAction("DEVISE", "CREATE").ifPresent(managerPerms::add);
@@ -276,6 +281,8 @@ public class RoleService {
             .ifPresent(userPerms::add);
         permissionRepository.findByEntityAndAction("DEVIS", "CREATE")
             .ifPresent(userPerms::add);
+        permissionRepository.findByEntityAndAction("BON_LIVRAISON", "CREATE")
+            .ifPresent(userPerms::add);
         createDefaultRole("USER", "Utilisateur standard — lecture + création de factures et devis", true, userPerms);
 
         // VIEWER — lecture seule
@@ -286,7 +293,8 @@ public class RoleService {
     }
 
     private void createDefaultRole(String name, String desc, boolean isSystem, Set<Permission> perms) {
-        if (!roleRepository.existsByName(name)) {
+        AppRole role = roleRepository.findByName(name).orElse(null);
+        if (role == null) {
             roleRepository.save(AppRole.builder()
                 .name(name)
                 .description(desc)
@@ -294,6 +302,15 @@ public class RoleService {
                 .permissions(perms)
                 .build());
             log.info("Rôle '{}' créé avec {} permissions", name, perms.size());
+        } else {
+            // Assurer que SUPER_ADMIN et ADMIN aient toujours toutes les permissions
+            if (name.equals("SUPER_ADMIN") || name.equals("ADMIN")) {
+                if (role.getPermissions().size() != perms.size()) {
+                    role.setPermissions(perms);
+                    roleRepository.save(role);
+                    log.info("Rôle '{}' mis à jour avec {} permissions", name, perms.size());
+                }
+            }
         }
     }
 }

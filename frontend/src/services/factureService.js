@@ -7,6 +7,7 @@ export const factureService = {
   getByClient: (clientId) => api.get(`/factures/client/${clientId}`),
   getStats: () => api.get('/factures/stats'),
   create: (data) => api.post('/factures', data),
+  createFromBL: (data) => api.post('/factures/depuis-bons-livraison', data),
   // Changer le statut : statut = 'ENVOYEE' | 'PAYEE' | 'ANNULEE'
   updateStatut: (id, payload) => api.patch(`/factures/${id}/statut`, payload),
   delete: (id) => api.delete(`/factures/${id}`),

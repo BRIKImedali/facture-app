@@ -104,6 +104,12 @@ public class CommandeService {
         String reference = generateReference();
         BigDecimal remise = request.remise() != null ? request.remise() : BigDecimal.ZERO;
 
+        // ── Résoudre le mode de paiement ──────────────────────────────────────
+        PaymentMethod paymentMethod = null;
+        if (request.paymentMethod() != null && !request.paymentMethod().isBlank()) {
+            paymentMethod = PaymentMethod.valueOf(request.paymentMethod());
+        }
+
         Commande commande = Commande.builder()
                 .reference(reference)
                 .client(client)
@@ -113,6 +119,7 @@ public class CommandeService {
                 .notes(request.notes())
                 .statut(StatutCommande.EN_ATTENTE)
                 .remise(remise.compareTo(BigDecimal.ZERO) > 0 ? remise : null)
+                .paymentMethod(paymentMethod)           // ← NOUVEAU
                 .build();
 
         commande.setDateCommande(
@@ -131,7 +138,8 @@ public class CommandeService {
         commande.setTotalTTC(totaux[3]);
 
         Commande saved = commandeRepository.save(commande);
-        log.info("Commande créée : {} (devisId={})", reference, request.devisId());
+        log.info("Commande créée : {} (devisId={}, paymentMethod={})",
+                reference, request.devisId(), paymentMethod);
         return toDTO(saved);
     }
 
@@ -140,8 +148,6 @@ public class CommandeService {
     public CommandeDTO creerDepuisDevis(Devis devis) {
         String reference = generateReference();
 
-        // Pour une commande auto-créée depuis devis, on prend le 1er vendeur & site disponibles
-        // (l'utilisateur peut ensuite modifier)
         Vendeur vendeur = vendeurRepository.findAll().stream().findFirst()
                 .orElseThrow(() -> new IllegalStateException("Aucun vendeur disponible pour créer la commande automatique."));
         Site site = siteRepository.findAll().stream().findFirst()
@@ -158,11 +164,11 @@ public class CommandeService {
                 .notes("Commande générée automatiquement depuis le devis " + devis.getReference())
                 .statut(StatutCommande.EN_ATTENTE)
                 .remise(remise.compareTo(BigDecimal.ZERO) > 0 ? remise : null)
+                // paymentMethod reste null pour les commandes auto — à renseigner manuellement
                 .build();
 
         commande.setDateCommande(LocalDateTime.now());
 
-        // Copier les lignes du devis
         List<LigneCommande> lignes = devis.getLignes().stream()
                 .map(ld -> LigneCommande.builder()
                         .commande(commande)
@@ -202,7 +208,13 @@ public class CommandeService {
 
         BigDecimal remise = request.remise() != null ? request.remise() : BigDecimal.ZERO;
 
-        // Reconstruire les lignes
+        // ── Mettre à jour le mode de paiement ────────────────────────────────
+        if (request.paymentMethod() != null && !request.paymentMethod().isBlank()) {
+            commande.setPaymentMethod(PaymentMethod.valueOf(request.paymentMethod()));
+        } else {
+            commande.setPaymentMethod(null);
+        }
+
         commande.getLignes().clear();
         List<LigneCommande> nouvellesLignes = buildLignesFromUpdate(request.lignes(), commande);
         BigDecimal[] totaux = calculerTotaux(nouvellesLignes, remise);
@@ -221,7 +233,8 @@ public class CommandeService {
         commande.setTotalTTC(totaux[3]);
 
         Commande saved = commandeRepository.save(commande);
-        log.info("Commande {} mise à jour", commande.getReference());
+        log.info("Commande {} mise à jour (paymentMethod={})",
+                commande.getReference(), commande.getPaymentMethod());
         return toDTO(saved);
     }
 
@@ -235,8 +248,15 @@ public class CommandeService {
         validerTransition(ancienStatut, nouveauStatut);
 
         commande.setStatut(nouveauStatut);
+
+        // ── Mettre à jour le mode de paiement si fourni ───────────────────────
+        if (request.paymentMethod() != null && !request.paymentMethod().isBlank()) {
+            commande.setPaymentMethod(PaymentMethod.valueOf(request.paymentMethod()));
+        }
+
         Commande saved = commandeRepository.save(commande);
-        log.info("Commande {} : statut changé de {} → {}", commande.getReference(), ancienStatut, nouveauStatut);
+        log.info("Commande {} : statut {} → {} (paymentMethod={})",
+                commande.getReference(), ancienStatut, nouveauStatut, commande.getPaymentMethod());
 
         // ── Flux automatique : VALIDEE → création d'une Facture ───────────────
         if (nouveauStatut == StatutCommande.VALIDEE) {
@@ -265,7 +285,6 @@ public class CommandeService {
         return String.format("CMD-%d-%04d", year, count + 1);
     }
 
-    /** Calcule [totalHT, totalHTApresRemise, totalTva, totalTTC] */
     private BigDecimal[] calculerTotaux(List<LigneCommande> lignes, BigDecimal remisePct) {
         BigDecimal totalHT = lignes.stream()
                 .map(LigneCommande::getMontantHT)
@@ -389,6 +408,7 @@ public class CommandeService {
                 c.getTotalHT_apres_remise(),
                 c.getTotalTva(),
                 c.getTotalTTC(),
+                c.getPaymentMethod() != null ? c.getPaymentMethod().name() : null,  // ← NOUVEAU
                 lignesDTO
         );
     }

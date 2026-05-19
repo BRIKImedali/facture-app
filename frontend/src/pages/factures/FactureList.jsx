@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box, Button, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Tooltip, CircularProgress,
-  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, Chip
+  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, Chip,
+  TextField, InputAdornment
 } from '@mui/material';
-import { Add as AddIcon, Visibility as VisibilityIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Add as AddIcon, Visibility as VisibilityIcon, Delete as DeleteIcon, Search as SearchIcon } from '@mui/icons-material';
 
 import { factureService } from '../../services/factureService';
 import Pagination from '../../components/Pagination';
@@ -16,6 +17,7 @@ const FactureList = () => {
   const [factures, setFactures] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedStatut, setSelectedStatut] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -75,8 +77,16 @@ const FactureList = () => {
     }
   };
 
-  const totalPages = Math.ceil(factures.length / itemsPerPage);
-  const paginatedFactures = factures.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const filteredFactures = factures.filter(f => {
+    const term = searchTerm.toLowerCase();
+    return (
+      f.numero?.toLowerCase().includes(term) ||
+      f.client?.nom?.toLowerCase().includes(term)
+    );
+  });
+
+  const totalPages = Math.ceil(filteredFactures.length / itemsPerPage);
+  const paginatedFactures = filteredFactures.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -92,10 +102,28 @@ const FactureList = () => {
         </Button>
       </Box>
 
+      <Box sx={{ mb: 2 }}>
+        <TextField
+          fullWidth
+          size="small"
+          placeholder="Rechercher par numéro ou client..."
+          value={searchTerm}
+          onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ maxWidth: 400 }}
+        />
+      </Box>
+
       <Box sx={{ mb: 3, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
         {STATUTS.map(s => (
-          <Button 
-            key={s} 
+          <Button
+            key={s}
             variant={selectedStatut === s ? 'contained' : 'outlined'}
             onClick={() => handleStatutChange(s)}
             size="small"
@@ -159,7 +187,7 @@ const FactureList = () => {
                     </TableCell>
                   </TableRow>
                 ))}
-                {factures.length === 0 && (
+                {filteredFactures.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} align="center">Aucune facture trouvée</TableCell>
                   </TableRow>
@@ -168,7 +196,7 @@ const FactureList = () => {
             </Table>
           </TableContainer>
           
-          {factures.length > 0 && (
+          {filteredFactures.length > 0 && (
             <Box sx={{ mt: 2 }}>
               <Pagination
                 currentPage={currentPage}

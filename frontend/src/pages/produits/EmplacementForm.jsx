@@ -3,8 +3,9 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { emplacementService } from '../../services/emplacementService';
 import { siteService }        from '../../services/siteService';
+import SearchableSelect from '../../components/SearchableSelect';
 
-const EMPTY = { zone: '', rayon: '', etagere: '', siteId: '' };
+const EMPTY = { zone: '', description: '', siteId: '' };
 
 export default function EmplacementForm() {
   const { id } = useParams();
@@ -23,7 +24,7 @@ export default function EmplacementForm() {
         if (isEdit) {
           const eRes = await emplacementService.getById(id);
           const e = eRes.data;
-          setForm({ zone: e.zone, rayon: e.rayon || '', etagere: e.etagere || '', siteId: String(e.siteId) });
+          setForm({ zone: e.zone, description: e.description || '', siteId: String(e.siteId) });
         }
       } catch {
         toast.error('Erreur lors du chargement');
@@ -69,32 +70,40 @@ export default function EmplacementForm() {
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Site *</label>
-            <select className="form-control" name="siteId" value={form.siteId} onChange={hc} required>
-              <option value="">— Sélectionner un site —</option>
-              {sites.map(s => (
-                <option key={s.id} value={String(s.id)}>{s.nom} — {s.ville}</option>
-              ))}
-            </select>
+            <SearchableSelect
+              value={form.siteId}
+              onChange={val => setForm(f => ({ ...f, siteId: val !== '' ? String(val) : '' }))}
+              options={sites}
+              valueKey="id"
+              renderLabel={s => `${s.nom} — ${s.ville}`}
+              placeholder="— Sélectionner un site —"
+              required
+            />
           </div>
 
           <div className="form-grid">
-            {[
-              { label: 'Zone *',  name: 'zone',    required: true },
-              { label: 'Rayon',   name: 'rayon'                   },
-              { label: 'Étagère', name: 'etagere'                 },
-            ].map(f => (
-              <div className="form-group" key={f.name}>
-                <label>{f.label}</label>
-                <input
-                  className="form-control"
-                  name={f.name}
-                  value={form[f.name] || ''}
-                  onChange={hc}
-                  required={f.required}
-                  placeholder={f.label.replace(' *', '')}
-                />
-              </div>
-            ))}
+            <div className="form-group">
+              <label>Zone *</label>
+              <input
+                className="form-control"
+                name="zone"
+                value={form.zone || ''}
+                onChange={hc}
+                required
+                placeholder="Zone"
+              />
+            </div>
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <label>Description</label>
+              <textarea
+                className="form-control"
+                name="description"
+                value={form.description || ''}
+                onChange={hc}
+                placeholder="Ajouter une description..."
+                rows="3"
+              />
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>

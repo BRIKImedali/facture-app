@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box, Button, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Tooltip, CircularProgress,
-  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, Chip
+  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, Chip,
+  TextField, InputAdornment
 } from '@mui/material';
-import { Add as AddIcon, Visibility as VisibilityIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Add as AddIcon, Visibility as VisibilityIcon, Delete as DeleteIcon, Search as SearchIcon } from '@mui/icons-material';
 
 import { commandeService } from '../../services/commandeService';
 import Pagination from '../../components/Pagination';
@@ -16,6 +17,7 @@ const CommandeList = () => {
   const [commandes, setCommandes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedStatut, setSelectedStatut] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -75,8 +77,16 @@ const CommandeList = () => {
     }
   };
 
-  const totalPages = Math.ceil(commandes.length / itemsPerPage);
-  const paginatedCommandes = commandes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const filteredCommandes = commandes.filter(c => {
+    const term = searchTerm.toLowerCase();
+    return (
+      c.reference?.toLowerCase().includes(term) ||
+      c.client?.nom?.toLowerCase().includes(term)
+    );
+  });
+
+  const totalPages = Math.ceil(filteredCommandes.length / itemsPerPage);
+  const paginatedCommandes = filteredCommandes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -92,10 +102,28 @@ const CommandeList = () => {
         </Button>
       </Box>
 
+      <Box sx={{ mb: 2 }}>
+        <TextField
+          fullWidth
+          size="small"
+          placeholder="Rechercher par référence ou client..."
+          value={searchTerm}
+          onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ maxWidth: 400 }}
+        />
+      </Box>
+
       <Box sx={{ mb: 3, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
         {STATUTS.map(s => (
-          <Button 
-            key={s} 
+          <Button
+            key={s}
             variant={selectedStatut === s ? 'contained' : 'outlined'}
             onClick={() => handleStatutChange(s)}
             size="small"
@@ -157,7 +185,7 @@ const CommandeList = () => {
                     </TableCell>
                   </TableRow>
                 ))}
-                {commandes.length === 0 && (
+                {filteredCommandes.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} align="center">Aucune commande trouvée</TableCell>
                   </TableRow>
@@ -166,7 +194,7 @@ const CommandeList = () => {
             </Table>
           </TableContainer>
           
-          {commandes.length > 0 && (
+          {filteredCommandes.length > 0 && (
             <Box sx={{ mt: 2 }}>
               <Pagination
                 currentPage={currentPage}

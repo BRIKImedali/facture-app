@@ -52,15 +52,11 @@ public class Client {
     private String ice;
 
     /**
-     * Catégories du client (ex: Entreprise, Particulier, Administration).
+     * Catégorie du client (ex: Entreprise, Particulier, Administration).
      */
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-        name = "client_categories_mapping",
-        joinColumns = @JoinColumn(name = "client_id"),
-        inverseJoinColumns = @JoinColumn(name = "categorie_id")
-    )
-    private java.util.List<CategorieClient> categories;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "categorie_id")
+    private CategorieClient categorie;
 
     /**
      * Vendeur responsable du client (optionnel).

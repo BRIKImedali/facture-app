@@ -92,11 +92,12 @@ public class ClientService {
         existing.setPays(dto.pays() != null ? dto.pays() : "Maroc");
         existing.setIce(dto.ice());
 
-        if (dto.categorieIds() != null && !dto.categorieIds().isEmpty()) {
-            List<CategorieClient> categories = categoryRepository.findAllById(dto.categorieIds());
-            existing.setCategories(categories);
+        if (dto.categorieId() != null) {
+            CategorieClient categorie = categoryRepository.findById(dto.categorieId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Catégorie introuvable : " + dto.categorieId()));
+            existing.setCategorie(categorie);
         } else {
-            existing.setCategories(null);
+            existing.setCategorie(null);
         }
 
         // Vendeur (optionnel)
@@ -143,7 +144,8 @@ public class ClientService {
                 c.getCodePostal(),
                 c.getPays(),
                 c.getIce(),
-                c.getCategories() != null ? c.getCategories().stream().map(CategorieClient::getId).toList() : null,
+                c.getCategorie() != null ? c.getCategorie().getId() : null,
+                c.getCategorie() != null ? c.getCategorie().getNom() : null,
                 // Vendeur
                 c.getVendeur() != null ? c.getVendeur().getId() : null,
                 c.getVendeur() != null ? (c.getVendeur().getPrenom() + " " + c.getVendeur().getNom()) : null,
@@ -166,9 +168,10 @@ public class ClientService {
                 .ice(dto.ice())
                 .build();
 
-        if (dto.categorieIds() != null && !dto.categorieIds().isEmpty()) {
-            List<CategorieClient> categories = categoryRepository.findAllById(dto.categorieIds());
-            client.setCategories(categories);
+        if (dto.categorieId() != null) {
+            CategorieClient categorie = categoryRepository.findById(dto.categorieId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Catégorie introuvable : " + dto.categorieId()));
+            client.setCategorie(categorie);
         }
 
         // Vendeur (optionnel)

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { produitService } from '../../services/produitService';
 import { uniteService } from '../../services/uniteService';
+import SearchableSelect from '../../components/SearchableSelect';
 
 const ProduitForm = () => {
   const { id } = useParams();
@@ -12,7 +13,7 @@ const ProduitForm = () => {
   const [loading, setLoading] = useState(true);
   const [unites, setUnites] = useState([]);
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
+  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm({
     defaultValues: { tauxTva: 19, uniteId: '', actif: true, stockQuantite: 0, stockMinimum: 0 }
   });
 
@@ -106,12 +107,22 @@ const ProduitForm = () => {
 
             <div className="form-group">
               <label>Unité *</label>
-              <select {...register('uniteId', { required: 'L\'unité est obligatoire' })} className={`form-control ${errors.uniteId ? 'is-invalid' : ''}`}>
-                <option value="">Sélectionnez une unité...</option>
-                {unites.map(u => (
-                  <option key={u.id} value={u.id}>{u.nom}</option>
-                ))}
-              </select>
+              <Controller
+                name="uniteId"
+                control={control}
+                rules={{ required: "L'unité est obligatoire" }}
+                render={({ field }) => (
+                  <SearchableSelect
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                    options={unites}
+                    valueKey="id"
+                    labelKey="nom"
+                    placeholder="Sélectionnez une unité..."
+                    required
+                  />
+                )}
+              />
               {errors.uniteId && <span className="error-text">{errors.uniteId.message}</span>}
             </div>
 

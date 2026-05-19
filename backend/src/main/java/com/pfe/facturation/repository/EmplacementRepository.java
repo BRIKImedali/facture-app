@@ -14,10 +14,9 @@ public interface EmplacementRepository extends JpaRepository<Emplacement, Long> 
     /** Tous les emplacements d'un site donné */
     List<Emplacement> findBySiteId(Long siteId);
 
-    /** Recherche par zone, rayon ou étagère */
+    /** Recherche par zone ou description */
     @Query("SELECT e FROM Emplacement e WHERE " +
            "LOWER(e.zone) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
-           "LOWER(e.rayon) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
-           "LOWER(e.etagere) LIKE LOWER(CONCAT('%', :q, '%'))")
+           "LOWER(e.description) LIKE LOWER(CONCAT('%', :q, '%'))")
     List<Emplacement> search(@Param("q") String query);
 }

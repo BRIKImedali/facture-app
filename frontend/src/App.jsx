@@ -53,6 +53,9 @@ import DevisList from './pages/devis/DevisList';
 import DevisCreate from './pages/devis/DevisCreate';
 import DevisDetail from './pages/devis/DevisDetail';
 import DevisEdit from './pages/devis/DevisEdit';
+import BonLivraisonList from './pages/bonsLivraison/BonLivraisonList';
+import BonLivraisonCreate from './pages/bonsLivraison/BonLivraisonCreate';
+import BonLivraisonDetail from './pages/bonsLivraison/BonLivraisonDetail';
 
 function App() {
   return (
@@ -119,6 +122,10 @@ function App() {
             <Route path="/devis/nouveau"                  element={<PermissionGuard permissions="DEVIS:CREATE" redirect><DevisCreate /></PermissionGuard>} />
             <Route path="/devis/:id"                      element={<PermissionGuard permissions="DEVIS:READ" redirect><DevisDetail /></PermissionGuard>} />
             <Route path="/devis/:id/modifier"             element={<PermissionGuard permissions="DEVIS:UPDATE" redirect><DevisEdit /></PermissionGuard>} />
+
+            <Route path="/bons-livraison"                 element={<PermissionGuard permissions="BON_LIVRAISON:READ" redirect><BonLivraisonList /></PermissionGuard>} />
+            <Route path="/bons-livraison/nouveau"         element={<PermissionGuard permissions="BON_LIVRAISON:CREATE" redirect><BonLivraisonCreate /></PermissionGuard>} />
+            <Route path="/bons-livraison/:id"             element={<PermissionGuard permissions="BON_LIVRAISON:READ" redirect><BonLivraisonDetail /></PermissionGuard>} />
 
             <Route path="/factures"                       element={<PermissionGuard permissions="FACTURE:READ" redirect><FactureList /></PermissionGuard>} />
             <Route path="/factures/nouvelle"              element={<PermissionGuard permissions="FACTURE:CREATE" redirect><FactureCreate /></PermissionGuard>} />

@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * Entité Emplacement — représente un emplacement physique dans un site.
- * Structure hiérarchique : Zone → Rayon → Étagère
+ * Structure hiérarchique : Zone
  */
 @Entity
 @Table(name = "emplacements")
@@ -31,9 +31,8 @@ public class Emplacement {
     @Column(nullable = false)
     private String zone;
 
-    private String rayon;
-
-    private String etagere;
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
     // ── Relations ──────────────────────────────────────────────────────────────
 

@@ -21,6 +21,8 @@ public record CreateCommandeRequest(
         String notes,
         /** Remise en % (0 à 100). Optionnel, null = aucune remise. */
         @DecimalMin(value = "0.0") @DecimalMax(value = "100.0") BigDecimal remise,
+        /** Mode de paiement : ESPECES, VIREMENT, CHEQUE. Optionnel. */
+        String paymentMethod,          // ← NOUVEAU
         @NotEmpty(message = "La commande doit contenir au moins une ligne") List<LigneCommandeRequest> lignes
 ) {
     public record LigneCommandeRequest(

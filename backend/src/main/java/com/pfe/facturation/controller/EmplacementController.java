@@ -14,7 +14,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/emplacements")
-@Tag(name = "Emplacements", description = "Gestion des emplacements (Zone / Rayon / Étagère)")
+@Tag(name = "Emplacements", description = "Gestion des emplacements")
 public class EmplacementController {
 
     private final EmplacementService emplacementService;
@@ -46,7 +46,7 @@ public class EmplacementController {
 
     @GetMapping("/search")
     @PreAuthorize("hasPermission('PRODUIT', 'READ')")
-    @Operation(summary = "Rechercher des emplacements (zone, rayon, étagère)")
+    @Operation(summary = "Rechercher des emplacements (zone, description)")
     public ResponseEntity<List<EmplacementDTO>> search(@RequestParam(name = "q") String q) {
         return ResponseEntity.ok(emplacementService.search(q));
     }

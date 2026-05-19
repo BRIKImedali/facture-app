@@ -49,6 +49,7 @@ class DebugFactureControllerTest {
                 null,
                 "notes",
                 null,
+                null,
                 List.of(new CreateFactureRequest.LigneRequest(null, "Test Ligne", 5, new BigDecimal("100"), 20.0))
         );
 

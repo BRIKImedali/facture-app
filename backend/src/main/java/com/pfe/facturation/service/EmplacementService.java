@@ -62,8 +62,7 @@ public class EmplacementService {
 
         Emplacement emplacement = Emplacement.builder()
                 .zone(dto.zone())
-                .rayon(dto.rayon())
-                .etagere(dto.etagere())
+                .description(dto.description())
                 .site(site)
                 .build();
 
@@ -77,8 +76,7 @@ public class EmplacementService {
         Site site = siteService.getOrThrow(dto.siteId());
 
         existing.setZone(dto.zone());
-        existing.setRayon(dto.rayon());
-        existing.setEtagere(dto.etagere());
+        existing.setDescription(dto.description());
         existing.setSite(site);
 
         Emplacement saved = emplacementRepository.save(existing);
@@ -100,8 +98,7 @@ public class EmplacementService {
         return new EmplacementDTO(
                 e.getId(),
                 e.getZone(),
-                e.getRayon(),
-                e.getEtagere(),
+                e.getDescription(),
                 e.getSite().getId(),
                 e.getSite().getNom(),
                 e.getCreatedAt(),

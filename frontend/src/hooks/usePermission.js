@@ -34,8 +34,8 @@ const usePermission = () => {
 
     // L'admin système a toutes les permissions
     if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
-      // Vérifier via appRoles si SUPER_ADMIN
-      if (user.appRoles?.some(r => r.name === 'SUPER_ADMIN')) {
+      // Vérifier via appRoles si SUPER_ADMIN ou ADMIN
+      if (user.appRoles?.some(r => ['SUPER_ADMIN', 'ADMIN'].includes(r.name))) {
         return true;
       }
     }

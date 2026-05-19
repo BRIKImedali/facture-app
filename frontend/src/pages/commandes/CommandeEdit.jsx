@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { produitService } from '../../services/produitService';
 import { commandeService } from '../../services/commandeService';
+import SearchableSelect from '../../components/SearchableSelect';
 
 const CommandeEdit = () => {
   const { id } = useParams();
@@ -15,6 +16,7 @@ const CommandeEdit = () => {
   const [dateCommande, setDateCommande] = useState('');
   const [notes, setNotes] = useState('');
   const [remise, setRemise] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState('');
   const [lignes, setLignes] = useState([]);
 
   useEffect(() => {
@@ -31,6 +33,7 @@ const CommandeEdit = () => {
       setDateCommande(c.dateCommande ? new Date(c.dateCommande).toISOString().split('T')[0] : '');
       setNotes(c.notes || '');
       setRemise(c.remise || 0);
+      setPaymentMethod(c.paymentMethod || '');
       setLignes(c.lignes.map(l => ({
         produitId: l.produitId || '',
         designation: l.designation,
@@ -87,6 +90,7 @@ const CommandeEdit = () => {
         dateCommande: dateCommande || null,
         notes,
         remise: remisePct > 0 ? remisePct : null,
+        paymentMethod: paymentMethod || null,
         lignes: lignes.map(l => ({
           produitId: l.produitId ? parseInt(l.produitId) : null,
           designation: l.designation,
@@ -127,6 +131,15 @@ const CommandeEdit = () => {
               <input type="number" min="0" max="100" step="0.5" value={remise}
                 onChange={e => setRemise(e.target.value)} className="form-control" />
             </div>
+            <div className="form-group">
+              <label>Mode de paiement</label>
+              <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="form-control">
+                <option value="">— Aucun / À définir —</option>
+                <option value="ESPECES">Espèces</option>
+                <option value="VIREMENT">Virement bancaire</option>
+                <option value="CHEQUE">Chèque</option>
+              </select>
+            </div>
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label>Notes / Remarques</label>
               <textarea value={notes} onChange={e => setNotes(e.target.value)} className="form-control" rows={2}
@@ -159,10 +172,14 @@ const CommandeEdit = () => {
                 return (
                   <tr key={i}>
                     <td>
-                      <select value={l.produitId} onChange={e => handleProduitChange(i, e.target.value)} className="form-control">
-                        <option value="">— Manuel —</option>
-                        {produits.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-                      </select>
+                      <SearchableSelect
+                        value={l.produitId}
+                        onChange={val => handleProduitChange(i, val)}
+                        options={produits}
+                        valueKey="id"
+                        labelKey="nom"
+                        placeholder="— Manuel —"
+                      />
                     </td>
                     <td><input value={l.designation} onChange={e => handleLigneChange(i, 'designation', e.target.value)} className="form-control" placeholder="Description..." required /></td>
                     <td><input type="number" min="1" value={l.quantite} onChange={e => handleLigneChange(i, 'quantite', e.target.value)} className="form-control" /></td>

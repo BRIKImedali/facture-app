@@ -1,5 +1,6 @@
 package com.pfe.facturation.service;
 
+import com.pfe.facturation.dto.BonLivraisonDTO;
 import com.pfe.facturation.dto.FactureResponseDTO;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
@@ -43,6 +44,30 @@ public class PdfService {
         ITextRenderer renderer = new ITextRenderer();
         
         // Flying Saucer requiert un XML/XHTML valide
+        renderer.setDocumentFromString(htmlContent);
+        renderer.layout();
+        renderer.createPDF(outputStream);
+
+        return outputStream.toByteArray();
+    }
+
+    public byte[] generateBonLivraisonPdf(BonLivraisonDTO bl) throws Exception {
+        Context context = new Context();
+        Map<String, Object> data = new HashMap<>();
+        data.put("bl", bl);
+
+        String dateCreationFormatee = "";
+        if (bl.dateCreation() != null && bl.dateCreation().length() >= 10) {
+            String dc = bl.dateCreation();
+            dateCreationFormatee = dc.substring(8, 10) + "/" + dc.substring(5, 7) + "/" + dc.substring(0, 4);
+        }
+        data.put("dateCreationFormatee", dateCreationFormatee);
+        context.setVariables(data);
+
+        String htmlContent = templateEngine.process("bl-template", context);
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ITextRenderer renderer = new ITextRenderer();
         renderer.setDocumentFromString(htmlContent);
         renderer.layout();
         renderer.createPDF(outputStream);

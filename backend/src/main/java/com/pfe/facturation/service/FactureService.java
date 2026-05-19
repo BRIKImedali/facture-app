@@ -1,10 +1,12 @@
 package com.pfe.facturation.service;
 
+import com.pfe.facturation.dto.CreateFactureDepuisBLRequest;
 import com.pfe.facturation.dto.CreateFactureRequest;
 import com.pfe.facturation.dto.FactureResponseDTO;
 import com.pfe.facturation.dto.UpdateStatutRequest;
 import com.pfe.facturation.entity.*;
 import com.pfe.facturation.exception.ResourceNotFoundException;
+import com.pfe.facturation.repository.BonLivraisonRepository;
 import com.pfe.facturation.repository.ClientRepository;
 import com.pfe.facturation.repository.FactureRepository;
 import com.pfe.facturation.repository.ProduitRepository;
@@ -33,15 +35,18 @@ public class FactureService {
     private final FactureRepository factureRepository;
     private final ClientRepository clientRepository;
     private final ProduitRepository produitRepository;
+    private final BonLivraisonRepository bonLivraisonRepository;
     private final ClientService clientService;
 
     public FactureService(FactureRepository factureRepository,
                           ClientRepository clientRepository,
                           ProduitRepository produitRepository,
+                          BonLivraisonRepository bonLivraisonRepository,
                           ClientService clientService) {
         this.factureRepository = factureRepository;
         this.clientRepository = clientRepository;
         this.produitRepository = produitRepository;
+        this.bonLivraisonRepository = bonLivraisonRepository;
         this.clientService = clientService;
     }
 
@@ -154,7 +159,7 @@ public class FactureService {
 
     // ===== Création automatique depuis une Commande (VALIDEE → Facture) =====
 
-    public FactureResponseDTO creerDepuisCommande(com.pfe.facturation.entity.Commande commande) {
+    public FactureResponseDTO creerDepuisCommande(Commande commande) {
         String numero = generateNumero();
         BigDecimal remise = commande.getRemise() != null ? commande.getRemise() : BigDecimal.ZERO;
 
@@ -169,6 +174,7 @@ public class FactureService {
                 .totalHT_apres_remise(commande.getTotalHT_apres_remise())
                 .totalTva(commande.getTotalTva())
                 .totalTTC(commande.getTotalTTC())
+                .paymentMethod(commande.getPaymentMethod())
                 .build();
 
         Facture savedFacture = factureRepository.save(facture);
@@ -191,6 +197,79 @@ public class FactureService {
         Facture withLignes = factureRepository.save(savedFacture);
 
         log.info("Facture {} créée automatiquement depuis commande {}", numero, commande.getReference());
+        return toDTO(withLignes);
+    }
+
+    // ===== Création depuis des Bons de Livraison (facturation groupée) =====
+
+    public FactureResponseDTO creerDepuisBonsLivraison(CreateFactureDepuisBLRequest request, User creator) {
+        Client client = clientRepository.findById(request.clientId())
+                .orElseThrow(() -> new ResourceNotFoundException("Client introuvable : " + request.clientId()));
+
+        List<BonLivraison> bls = bonLivraisonRepository.findAllById(request.bonLivraisonIds());
+        if (bls.size() != request.bonLivraisonIds().size()) {
+            throw new IllegalArgumentException("Un ou plusieurs bons de livraison sont introuvables.");
+        }
+
+        for (BonLivraison bl : bls) {
+            if (!bl.getClient().getId().equals(request.clientId())) {
+                throw new IllegalArgumentException(
+                        "Le bon de livraison " + bl.getNumero() + " n'appartient pas au client sélectionné.");
+            }
+            if (bl.getStatut() != StatutBonLivraison.LIVRE) {
+                throw new IllegalStateException(
+                        "Le bon de livraison " + bl.getNumero() + " n'est pas au statut LIVRE.");
+            }
+            if (bl.getFacture() != null) {
+                throw new IllegalStateException(
+                        "Le bon de livraison " + bl.getNumero() + " est déjà facturé (facture " + bl.getFacture().getNumero() + ").");
+            }
+        }
+
+        // Consolider les lignes de tous les BL
+        List<LigneFacture> lignes = bls.stream()
+                .flatMap(bl -> bl.getLignes().stream())
+                .map(lbl -> LigneFacture.builder()
+                        .produit(lbl.getProduit())
+                        .designation(lbl.getDesignation())
+                        .quantite(lbl.getQuantite())
+                        .prixUnitaireHT(lbl.getPrixUnitaireHT())
+                        .tauxTva(lbl.getTauxTva())
+                        .montantHT(lbl.getMontantHT())
+                        .montantTva(lbl.getMontantTva())
+                        .montantTTC(lbl.getMontantTTC())
+                        .build())
+                .toList();
+
+        BigDecimal remise = BigDecimal.ZERO;
+        BigDecimal[] totaux = calculerTotaux(lignes, remise);
+
+        String numero = generateNumero();
+        Facture facture = Facture.builder()
+                .numero(numero)
+                .client(client)
+                .createdBy(creator)
+                .statut(StatutFacture.BROUILLON)
+                .type(TypeFacture.GROUPEE_BL)
+                .dateEcheance(request.dateEcheance())
+                .notes(request.notes())
+                .totalHT(totaux[0])
+                .totalHT_apres_remise(totaux[1])
+                .totalTva(totaux[2])
+                .totalTTC(totaux[3])
+                .paymentMethod(request.paymentMethod() != null ? PaymentMethod.valueOf(request.paymentMethod()) : null)
+                .build();
+
+        Facture savedFacture = factureRepository.save(facture);
+        lignes.forEach(l -> l.setFacture(savedFacture));
+        savedFacture.getLignes().addAll(lignes);
+        Facture withLignes = factureRepository.save(savedFacture);
+
+        // Marquer les BL comme facturés
+        bls.forEach(bl -> bl.setFacture(withLignes));
+        bonLivraisonRepository.saveAll(bls);
+
+        log.info("Facture groupée {} créée depuis {} BL pour le client {}", numero, bls.size(), client.getNom());
         return toDTO(withLignes);
     }
 
@@ -342,7 +421,8 @@ public class FactureService {
                 f.getTotalHT_apres_remise(),
                 f.getTotalTva(),
                 f.getTotalTTC(),
-                f.getPaymentMethod() != null ? f.getPaymentMethod().name() : null
+                f.getPaymentMethod() != null ? f.getPaymentMethod().name() : null,
+                f.getType() != null ? f.getType().name() : TypeFacture.CLASSIQUE.name()
         );
     }
 

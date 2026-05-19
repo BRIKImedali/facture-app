@@ -162,7 +162,6 @@ const CategoriesClientsPage = () => {
             <Table>
               <TableHead sx={{ bgcolor: '#f8fafc' }}>
                 <TableRow>
-                  <TableCell><b>ID</b></TableCell>
                   <TableCell><b>Nom</b></TableCell>
                   <TableCell><b>Description</b></TableCell>
                   <TableCell align="right"><b>Actions</b></TableCell>
@@ -171,7 +170,6 @@ const CategoriesClientsPage = () => {
               <TableBody>
                 {paginatedCategories.map((category) => (
                   <TableRow key={category.id} hover>
-                    <TableCell>{category.id}</TableCell>
                     <TableCell>{category.nom}</TableCell>
                     <TableCell>{category.description || '-'}</TableCell>
                     <TableCell align="right">
@@ -194,7 +192,7 @@ const CategoriesClientsPage = () => {
                 ))}
                 {filteredCategories.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} align="center">Aucune catégorie trouvée</TableCell>
+                    <TableCell colSpan={3} align="center">Aucune catégorie trouvée</TableCell>
                   </TableRow>
                 )}
               </TableBody>

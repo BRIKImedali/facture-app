@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { produitService } from '../../services/produitService';
 import { devisService } from '../../services/devisService';
+import SearchableSelect from '../../components/SearchableSelect';
 
 const DevisEdit = () => {
   const { id } = useParams();
@@ -162,10 +163,14 @@ const DevisEdit = () => {
                 return (
                   <tr key={i}>
                     <td>
-                      <select value={l.produitId} onChange={e => handleProduitChange(i, e.target.value)} className="form-control">
-                        <option value="">— Manuel —</option>
-                        {produits.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-                      </select>
+                      <SearchableSelect
+                        value={l.produitId}
+                        onChange={val => handleProduitChange(i, val)}
+                        options={produits}
+                        valueKey="id"
+                        labelKey="nom"
+                        placeholder="— Manuel —"
+                      />
                     </td>
                     <td><input value={l.designation} onChange={e => handleLigneChange(i, 'designation', e.target.value)} className="form-control" placeholder="Description..." required /></td>
                     <td><input type="number" min="1" value={l.quantite} onChange={e => handleLigneChange(i, 'quantite', e.target.value)} className="form-control" /></td>

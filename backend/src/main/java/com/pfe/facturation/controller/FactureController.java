@@ -1,5 +1,6 @@
 package com.pfe.facturation.controller;
 
+import com.pfe.facturation.dto.CreateFactureDepuisBLRequest;
 import com.pfe.facturation.dto.CreateFactureRequest;
 import com.pfe.facturation.dto.FactureResponseDTO;
 import com.pfe.facturation.dto.UpdateStatutRequest;
@@ -81,6 +82,16 @@ public class FactureController {
             @AuthenticationPrincipal User currentUser) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(factureService.create(request, currentUser));
+    }
+
+    @PostMapping("/depuis-bons-livraison")
+    @PreAuthorize("hasPermission('FACTURE', 'CREATE')")
+    @Operation(summary = "Créer une facture groupée depuis plusieurs bons de livraison")
+    public ResponseEntity<FactureResponseDTO> createFromBL(
+            @RequestBody CreateFactureDepuisBLRequest request,
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(factureService.creerDepuisBonsLivraison(request, currentUser));
     }
 
     @PatchMapping("/{id}/statut")

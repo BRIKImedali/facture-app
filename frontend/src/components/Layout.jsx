@@ -19,56 +19,10 @@ const CONTACTS_ACCORDION = {
   label: 'Contacts',
   permission: 'CLIENTS',
   children: [
-    {
-      key: 'clients-group',
-      icon: '🏢',
-      label: 'Clients',
-      children: [
-        { key: 'client-liste', to: '/clients', label: 'Liste des clients', end: true },
-      ],
-    },
-    {
-      key: 'vendeurs-group',
-      icon: '🧑',
-      label: 'Vendeurs',
-      children: [
-        { key: 'vendeur-liste', to: '/vendeurs', label: 'Liste des vendeurs', end: true },
-      ],
-    },
-    {
-      key: 'categories-group',
-      icon: '🏷️',
-      label: 'Catégories',
-      children: [
-        { key: 'categorie-liste', to: '/categories-clients', label: 'Catégories', end: true },
-      ],
-    },
-    {
-      key: 'devises-group',
-      icon: '💱',
-      label: 'Devises',
-      children: [
-        { key: 'devise-liste', to: '/devises', label: 'Devises monétaires', end: true },
-      ],
-    },
-  ],
-};
-
-// ─── Accordion definition for "TVA" ──────────────────────────────────────────
-const TVA_ACCORDION = {
-  key: 'tva',
-  icon: '🏷',
-  label: 'TVA',
-  permission: 'FACTURES',
-  children: [
-    {
-      key: 'taux-tva-group',
-      icon: '%',
-      label: 'Taux de TVA',
-      children: [
-        { key: 'taux-tva-liste', to: '/taux-tva', label: 'Gestion des taux TVA', end: true },
-      ],
-    },
+    { key: 'clients', to: '/clients', label: 'Clients', end: true },
+    { key: 'vendeurs', to: '/vendeurs', label: 'Vendeurs', end: true },
+    { key: 'categories', to: '/categories-clients', label: 'Catégories', end: true },
+    { key: 'devises', to: '/devises', label: 'Devises', end: true },
   ],
 };
 
@@ -79,30 +33,10 @@ const COMMERCE_ACCORDION = {
   label: 'Commerce',
   permission: 'FACTURES',
   children: [
-    {
-      key: 'devis-group',
-      icon: '📄',
-      label: 'Devis',
-      children: [
-        { key: 'devis-liste', to: '/devis', label: 'Liste des devis', end: true },
-      ],
-    },
-    {
-      key: 'commandes-group',
-      icon: '🛍️',
-      label: 'Commandes',
-      children: [
-        { key: 'commande-liste', to: '/commandes', label: 'Liste des commandes', end: true },
-      ],
-    },
-    {
-      key: 'factures-group',
-      icon: '🧾',
-      label: 'Factures',
-      children: [
-        { key: 'facture-liste', to: '/factures', label: 'Liste des factures', end: true },
-      ],
-    },
+    { key: 'devis', to: '/devis', label: 'Devis', end: true },
+    { key: 'commandes', to: '/commandes', label: 'Commandes', end: true },
+    { key: 'bons-livraison', to: '/bons-livraison', label: 'Bons de livraison', end: true },
+    { key: 'factures', to: '/factures', label: 'Factures', end: true },
   ],
 };
 
@@ -113,41 +47,11 @@ const PRODUITS_ACCORDION = {
   label: 'Produits',
   permission: 'PRODUITS',
   children: [
-    // ── Lien direct vers le catalogue produits ──────────────────────────────
-    { key: 'produit-catalogue', to: '/produits', label: '📋 Catalogue produits', end: true },
-
-    {
-      key: 'stock',
-      icon: '🗄️',
-      label: 'Stock',
-      children: [
-        { key: 'stock-liste', to: '/stock', label: 'Liste des stocks', end: true },
-      ],
-    },
-    {
-      key: 'emplacement',
-      icon: '📍',
-      label: 'Emplacement',
-      children: [
-        { key: 'empl-zones', to: '/emplacement', label: 'Zone / Rayon / Étagère', end: true },
-      ],
-    },
-    {
-      key: 'site',
-      icon: '🏭',
-      label: 'Site',
-      children: [
-        { key: 'site-liste', to: '/site', label: 'Liste des sites', end: true },
-      ],
-    },
-    {
-      key: 'unite',
-      icon: '📏',
-      label: 'Unités',
-      children: [
-        { key: 'unite-liste', to: '/unites', label: 'Unités de mesure', end: true },
-      ],
-    },
+    { key: 'produits-cat', to: '/produits', label: 'Catalogue produits', end: true },
+    { key: 'stock', to: '/stock', label: 'Stock', end: true },
+    { key: 'emplacement', to: '/emplacement', label: 'Emplacement', end: true },
+    { key: 'site', to: '/site', label: 'Site', end: true },
+    { key: 'unite', to: '/unites', label: 'Unités', end: true },
   ],
 };
 
@@ -182,7 +86,6 @@ const AccordionGroup = ({ group, depth = 1, closeSidebar }) => {
       >
         {group.icon && <span className="nav-icon">{group.icon}</span>}
         <span className="accordion-label">{group.label}</span>
-        <span className={`accordion-chevron ${open ? 'open' : ''}`}>›</span>
       </button>
 
       <div className={`accordion-body ${open ? 'accordion-body--open' : ''}`}>
@@ -329,13 +232,16 @@ const Layout = () => {
             />
           )}
 
-          {/* ── TVA — accordion au-dessus de Commerce ── */}
+          {/* ── TVA — lien direct au-dessus de Commerce ── */}
           {showCommerce && (
-            <AccordionGroup
-              group={TVA_ACCORDION}
-              depth={1}
-              closeSidebar={closeSidebar}
-            />
+            <NavLink
+              to="/taux-tva"
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              onClick={closeSidebar}
+            >
+              <span className="nav-icon">%</span>
+              <span>% TVA</span>
+            </NavLink>
           )}
 
           {/* ── Commerce — accordion multi-niveaux ── */}

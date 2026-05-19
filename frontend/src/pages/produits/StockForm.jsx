@@ -5,6 +5,7 @@ import { stockService }       from '../../services/stockService';
 import { siteService }        from '../../services/siteService';
 import { emplacementService } from '../../services/emplacementService';
 import { produitService }     from '../../services/produitService';
+import SearchableSelect from '../../components/SearchableSelect';
 
 const EMPTY = { produitId: '', siteId: '', emplacementId: '', quantite: 0, seuilMinimum: 0 };
 
@@ -53,7 +54,7 @@ export default function StockForm() {
   }, [id, isEdit, navigate]);
 
   const filteredEmplacements = form.siteId
-    ? emplacements.filter(e => String(e.siteId) === form.siteId)
+    ? emplacements.filter(e => String(e.siteId) === String(form.siteId))
     : emplacements;
 
   const hc = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
@@ -96,30 +97,41 @@ export default function StockForm() {
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Produit *</label>
-            <select className="form-control" name="produitId" value={form.produitId} onChange={hc} required disabled={isEdit}>
-              <option value="">— Sélectionner —</option>
-              {produits.map(p => <option key={p.id} value={String(p.id)}>{p.nom}</option>)}
-            </select>
+            <SearchableSelect
+              value={form.produitId}
+              onChange={val => setForm(f => ({ ...f, produitId: val !== '' ? String(val) : '' }))}
+              options={produits}
+              valueKey="id"
+              labelKey="nom"
+              placeholder="— Sélectionner —"
+              required
+              disabled={isEdit}
+            />
           </div>
 
           <div className="form-group">
             <label>Site *</label>
-            <select className="form-control" name="siteId" value={form.siteId} onChange={hc} required>
-              <option value="">— Sélectionner —</option>
-              {sites.map(s => <option key={s.id} value={String(s.id)}>{s.nom}</option>)}
-            </select>
+            <SearchableSelect
+              value={form.siteId}
+              onChange={val => setForm(f => ({ ...f, siteId: val !== '' ? String(val) : '', emplacementId: '' }))}
+              options={sites}
+              valueKey="id"
+              labelKey="nom"
+              placeholder="— Sélectionner —"
+              required
+            />
           </div>
 
           <div className="form-group">
             <label>Emplacement</label>
-            <select className="form-control" name="emplacementId" value={form.emplacementId} onChange={hc}>
-              <option value="">— Aucun —</option>
-              {filteredEmplacements.map(e => (
-                <option key={e.id} value={String(e.id)}>
-                  {e.zone}{e.rayon ? ` / ${e.rayon}` : ''}{e.etagere ? ` / ${e.etagere}` : ''}
-                </option>
-              ))}
-            </select>
+            <SearchableSelect
+              value={form.emplacementId}
+              onChange={val => setForm(f => ({ ...f, emplacementId: val !== '' ? String(val) : '' }))}
+              options={filteredEmplacements}
+              valueKey="id"
+              renderLabel={e => `${e.zone}${e.rayon ? ` / ${e.rayon}` : ''}${e.etagere ? ` / ${e.etagere}` : ''}`}
+              placeholder="— Aucun —"
+            />
           </div>
 
           <div className="form-grid">

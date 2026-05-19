@@ -31,6 +31,13 @@ public class Commande {
     @Builder.Default
     private StatutCommande statut = StatutCommande.EN_ATTENTE;
 
+    /**
+     * Mode de paiement de la commande.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", length = 20)
+    private PaymentMethod paymentMethod;
+
     /** Remise globale en pourcentage (0–100). Null = pas de remise. */
     @Column(precision = 5, scale = 2)
     private BigDecimal remise;

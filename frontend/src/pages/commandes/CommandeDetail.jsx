@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { commandeService } from '../../services/commandeService';
+import usePermission from '../../hooks/usePermission';
 
 const STATUT_CONFIG = {
   EN_ATTENTE: { label: 'En attente', color: '#f59e0b', bg: '#fef3c7' },
@@ -13,6 +14,8 @@ const STATUT_CONFIG = {
 const CommandeDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { hasPermission } = usePermission();
+  const canCreateBL = hasPermission('BON_LIVRAISON:CREATE');
   const [commande, setCommande] = useState(null);
   const [loading, setLoading] = useState(true);
   const [validating, setValidating] = useState(false);
@@ -90,6 +93,15 @@ const CommandeDetail = () => {
               ❌ Annuler
             </button>
           )}
+          {canCreateBL && (
+            <button
+              className="btn btn-secondary"
+              onClick={() => navigate(`/bons-livraison/nouveau?commandeId=${id}`)}
+              style={{ color: '#0ea5e9', borderColor: '#0ea5e9' }}
+            >
+              🚚 Créer un BL
+            </button>
+          )}
           <Link to="/commandes" className="btn btn-secondary">← Retour</Link>
         </div>
       </div>
@@ -110,6 +122,14 @@ const CommandeDetail = () => {
           </div>
           <div><label style={{ fontWeight: 600, color: '#64748b', fontSize: '0.8rem' }}>DATE COMMANDE</label>
             <p style={{ margin: '4px 0' }}>{commande.dateCommande ? new Date(commande.dateCommande).toLocaleDateString('fr-FR') : '-'}</p>
+          </div>
+          <div><label style={{ fontWeight: 600, color: '#64748b', fontSize: '0.8rem' }}>MÉTHODE PAIEMENT</label>
+            <p style={{ margin: '4px 0' }}>
+              {commande.paymentMethod === 'ESPECES' ? 'Espèces' : 
+               commande.paymentMethod === 'VIREMENT' ? 'Virement bancaire' : 
+               commande.paymentMethod === 'CHEQUE' ? 'Chèque' : 
+               commande.paymentMethod || '-'}
+            </p>
           </div>
           {commande.notes && (
             <div style={{ gridColumn: '1 / -1' }}>
