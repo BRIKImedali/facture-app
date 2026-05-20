@@ -169,6 +169,27 @@ const FactureCreate = () => {
     }
   };
 
+  const thStyle = {
+    padding: '0.75rem 0.75rem',
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    color: '#475569',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    whiteSpace: 'nowrap',
+  };
+
+  const inputBase = {
+    width: '100%',
+    border: '1.5px solid #e2e8f0',
+    borderRadius: '6px',
+    padding: '6px 8px',
+    fontSize: '0.9rem',
+    background: '#fff',
+    boxSizing: 'border-box',
+    outline: 'none',
+  };
+
   return (
     <div style={{ maxWidth: 900 }}>
       <div className="page-header">
@@ -449,12 +470,12 @@ const FactureCreate = () => {
           <table className="data-table">
             <thead>
               <tr>
-                <th style={{ width: '25%' }}>Produit (optionnel)</th>
-                <th>Désignation *</th>
-                <th style={{ width: '70px' }}>Qté</th>
-                <th style={{ width: '120px' }}>Prix HT</th>
-                <th style={{ width: '80px' }}>TVA %</th>
-                <th style={{ width: '100px' }}>Total TTC</th>
+                <th style={{ ...thStyle, width: '22%' }}>Produit (optionnel)</th>
+                <th style={thStyle}>Désignation *</th>
+                <th style={{ ...thStyle, width: '80px' }}>Qté</th>
+                <th style={{ ...thStyle, width: '110px' }}>Prix HT</th>
+                <th style={{ ...thStyle, width: '90px' }}>TVA %</th>
+                <th style={{ ...thStyle, width: '110px' }}>Total TTC</th>
                 <th style={{ width: '40px' }}></th>
               </tr>
             </thead>
@@ -474,19 +495,38 @@ const FactureCreate = () => {
                       />
                     </td>
                     <td>
-                      <input value={l.designation} onChange={e => handleLigneChange(i, 'designation', e.target.value)}
-                        className="form-control" placeholder="Description..." required />
+                      <input
+                        value={l.designation}
+                        onChange={e => handleLigneChange(i, 'designation', e.target.value)}
+                        style={inputBase}
+                        placeholder="Description..."
+                        required
+                      />
                     </td>
                     <td>
-                      <input type="number" min="1" value={l.quantite} onChange={e => handleLigneChange(i, 'quantite', e.target.value)}
-                        className="form-control" />
+                      <input
+                        type="number" min="1"
+                        value={l.quantite}
+                        onChange={e => handleLigneChange(i, 'quantite', e.target.value)}
+                        style={{ ...inputBase, textAlign: 'center' }}
+                      />
                     </td>
                     <td>
-                      <input type="number" step="0.01" min="0" value={l.prixUnitaireHT} onChange={e => handleLigneChange(i, 'prixUnitaireHT', e.target.value)}
-                        className="form-control" placeholder="0.00" required />
+                      <input
+                        type="number" step="0.01" min="0"
+                        value={l.prixUnitaireHT}
+                        onChange={e => handleLigneChange(i, 'prixUnitaireHT', e.target.value)}
+                        style={{ ...inputBase, textAlign: 'right' }}
+                        placeholder="0.00"
+                        required
+                      />
                     </td>
                     <td>
-                      <select value={l.tauxTva} onChange={e => handleLigneChange(i, 'tauxTva', e.target.value)} className="form-control">
+                      <select
+                        value={l.tauxTva}
+                        onChange={e => handleLigneChange(i, 'tauxTva', e.target.value)}
+                        style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: '6px', padding: '6px 4px', fontSize: '0.88rem', background: '#fff', cursor: 'pointer' }}
+                      >
                         {tauxTvaList.length > 0
                           ? tauxTvaList.map(t => (
                               <option key={t.id} value={t.valeur}>

@@ -3,15 +3,18 @@ import {
   Box, Button, Typography, Paper, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, IconButton, Tooltip,
   Chip, CircularProgress, TextField, InputAdornment, MenuItem, Select,
-  FormControl, InputLabel, Snackbar, Alert,
+  FormControl, InputLabel, Snackbar, Alert, Menu,
+  Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
 import {
   Add as AddIcon, Visibility as ViewIcon,
   PictureAsPdf as PdfIcon, Search as SearchIcon,
-  LocalShipping as ShippingIcon,
+  LocalShipping as ShippingIcon, Receipt as FactureIcon,
+  MoreVert as MoreIcon, ArrowDropDown as ArrowDropDownIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { bonLivraisonService } from '../../services/bonLivraisonService';
+import { factureService } from '../../services/factureService';
 import Pagination from '../../components/Pagination';
 import usePermission from '../../hooks/usePermission';
 import api from '../../services/api';
@@ -23,10 +26,19 @@ const STATUT_CONFIG = {
   ANNULE:    { label: 'Annulé',    color: 'error' },
 };
 
+const TRANSITIONS = {
+  BROUILLON: ['EN_COURS', 'ANNULE'],
+  EN_COURS:  ['LIVRE', 'ANNULE'],
+  LIVRE:     [],
+  ANNULE:    [],
+};
+
 const BonLivraisonList = () => {
   const navigate = useNavigate();
   const { hasPermission } = usePermission();
-  const canCreate = hasPermission('BON_LIVRAISON:CREATE');
+  const canCreate  = hasPermission('BON_LIVRAISON:CREATE');
+  const canUpdate  = hasPermission('BON_LIVRAISON:UPDATE');
+  const canFacture = hasPermission('FACTURE:CREATE');
 
   const [bls, setBls] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +47,15 @@ const BonLivraisonList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  // Statut change menu
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [menuBl, setMenuBl] = useState(null);
+  const [updatingStatut, setUpdatingStatut] = useState(null);
+
+  // Facturer dialog
+  const [factureDialog, setFactureDialog] = useState({ open: false, bl: null });
+  const [facturing, setFacturing] = useState(false);
 
   useEffect(() => {
     fetchBls();
@@ -65,6 +86,48 @@ const BonLivraisonList = () => {
       window.URL.revokeObjectURL(url);
     } catch {
       showSnackbar('Erreur lors du téléchargement du PDF', 'error');
+    }
+  };
+
+  const openStatutMenu = (event, bl) => {
+    setAnchorEl(event.currentTarget);
+    setMenuBl(bl);
+  };
+
+  const closeStatutMenu = () => {
+    setAnchorEl(null);
+    setMenuBl(null);
+  };
+
+  const handleStatutChange = async (nouveauStatut) => {
+    const bl = menuBl;
+    closeStatutMenu();
+    setUpdatingStatut(bl.id);
+    try {
+      const res = await bonLivraisonService.updateStatut(bl.id, nouveauStatut);
+      setBls(prev => prev.map(b => b.id === bl.id ? res.data : b));
+      showSnackbar(`BL ${bl.numero} : statut changé en "${STATUT_CONFIG[nouveauStatut]?.label}"`, 'success');
+    } catch (err) {
+      showSnackbar(err.response?.data?.message || 'Erreur lors du changement de statut', 'error');
+    } finally {
+      setUpdatingStatut(null);
+    }
+  };
+
+  const handleFacturer = async () => {
+    const bl = factureDialog.bl;
+    setFacturing(true);
+    try {
+      const res = await factureService.createFromSingleBL(bl.id);
+      showSnackbar(`Facture ${res.data.numero} créée avec succès !`, 'success');
+      // Refresh BL to get updated factureId/factureNumero
+      const updated = await bonLivraisonService.getById(bl.id);
+      setBls(prev => prev.map(b => b.id === bl.id ? updated.data : b));
+      setFactureDialog({ open: false, bl: null });
+    } catch (err) {
+      showSnackbar(err.response?.data?.message || 'Erreur lors de la création de la facture', 'error');
+    } finally {
+      setFacturing(false);
     }
   };
 
@@ -158,6 +221,10 @@ const BonLivraisonList = () => {
               <TableBody>
                 {paginated.map((bl) => {
                   const statutCfg = STATUT_CONFIG[bl.statut] || { label: bl.statut, color: 'default' };
+                  const nextStatuts = TRANSITIONS[bl.statut] || [];
+                  const canFacturer = canFacture && bl.statut === 'LIVRE' && !bl.factureId;
+                  const isUpdating = updatingStatut === bl.id;
+
                   return (
                     <TableRow key={bl.id} hover>
                       <TableCell>
@@ -168,10 +235,17 @@ const BonLivraisonList = () => {
                       <TableCell>{bl.dateCreation ? bl.dateCreation.substring(0, 10) : '—'}</TableCell>
                       <TableCell>{bl.dateLivraison || '—'}</TableCell>
                       <TableCell>
-                        <Chip label={statutCfg.label} color={statutCfg.color} size="small" />
-                        {bl.factureNumero && (
-                          <Chip label="Facturé" size="small" sx={{ ml: 0.5, bgcolor: '#7c3aed', color: 'white' }} />
-                        )}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                          <Chip label={statutCfg.label} color={statutCfg.color} size="small" />
+                          {bl.factureNumero && (
+                            <Chip
+                              label="Facturé"
+                              size="small"
+                              sx={{ bgcolor: '#7c3aed', color: 'white', cursor: 'pointer' }}
+                              onClick={() => navigate(`/factures/${bl.factureId}`)}
+                            />
+                          )}
+                        </Box>
                       </TableCell>
                       <TableCell>
                         {bl.totalTTC != null
@@ -179,16 +253,62 @@ const BonLivraisonList = () => {
                           : '—'}
                       </TableCell>
                       <TableCell align="right">
-                        <Tooltip title="Voir le détail">
-                          <IconButton color="primary" onClick={() => navigate(`/bons-livraison/${bl.id}`)}>
-                            <ViewIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Télécharger PDF">
-                          <IconButton color="secondary" onClick={() => handleDownloadPdf(bl)}>
-                            <PdfIcon />
-                          </IconButton>
-                        </Tooltip>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0.5 }}>
+                          <Tooltip title="Voir le détail">
+                            <IconButton color="primary" onClick={() => navigate(`/bons-livraison/${bl.id}`)}>
+                              <ViewIcon />
+                            </IconButton>
+                          </Tooltip>
+
+                          {canFacturer && (
+                            <Tooltip title="Créer une facture pour ce BL">
+                              <IconButton
+                                sx={{ color: '#7c3aed' }}
+                                onClick={() => setFactureDialog({ open: true, bl })}
+                              >
+                                <FactureIcon />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+
+                          {bl.factureId && !canFacturer && bl.statut === 'LIVRE' && (
+                            <Tooltip title={`Voir la facture ${bl.factureNumero}`}>
+                              <IconButton
+                                sx={{ color: '#7c3aed' }}
+                                onClick={() => navigate(`/factures/${bl.factureId}`)}
+                              >
+                                <FactureIcon />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+
+                          <Tooltip title="Télécharger PDF">
+                            <IconButton color="secondary" onClick={() => handleDownloadPdf(bl)}>
+                              <PdfIcon />
+                            </IconButton>
+                          </Tooltip>
+
+                          {canUpdate && nextStatuts.length > 0 && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              endIcon={isUpdating ? <CircularProgress size={12} /> : <ArrowDropDownIcon />}
+                              onClick={(e) => openStatutMenu(e, bl)}
+                              disabled={isUpdating}
+                              sx={{
+                                fontSize: '0.72rem',
+                                py: 0.3,
+                                px: 1,
+                                borderColor: '#cbd5e1',
+                                color: '#475569',
+                                whiteSpace: 'nowrap',
+                                '&:hover': { borderColor: '#94a3b8', bgcolor: '#f8fafc' },
+                              }}
+                            >
+                              Statut
+                            </Button>
+                          )}
+                        </Box>
                       </TableCell>
                     </TableRow>
                   );
@@ -217,6 +337,48 @@ const BonLivraisonList = () => {
           )}
         </>
       )}
+
+      {/* Menu déroulant pour changer le statut */}
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeStatutMenu}>
+        {(TRANSITIONS[menuBl?.statut] || []).map(s => (
+          <MenuItem key={s} onClick={() => handleStatutChange(s)}>
+            <Chip
+              label={STATUT_CONFIG[s]?.label || s}
+              color={STATUT_CONFIG[s]?.color || 'default'}
+              size="small"
+              sx={{ mr: 1 }}
+            />
+            Passer en {STATUT_CONFIG[s]?.label || s}
+          </MenuItem>
+        ))}
+      </Menu>
+
+      {/* Dialog de confirmation pour facturer un BL */}
+      <Dialog open={factureDialog.open} onClose={() => !facturing && setFactureDialog({ open: false, bl: null })}>
+        <DialogTitle>Créer une facture</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Créer une facture pour le bon de livraison <strong>{factureDialog.bl?.numero}</strong> ?
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#64748b', mt: 1 }}>
+            Client : {factureDialog.bl?.client?.nom}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFactureDialog({ open: false, bl: null })} color="inherit" disabled={facturing}>
+            Annuler
+          </Button>
+          <Button
+            onClick={handleFacturer}
+            variant="contained"
+            disabled={facturing}
+            sx={{ bgcolor: '#7c3aed', '&:hover': { bgcolor: '#6d28d9' } }}
+            startIcon={facturing ? <CircularProgress size={16} sx={{ color: 'white' }} /> : <FactureIcon />}
+          >
+            {facturing ? 'Création...' : 'Créer la facture'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={snackbar.open}

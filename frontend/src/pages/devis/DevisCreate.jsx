@@ -105,11 +105,32 @@ const DevisCreate = () => {
     }
   };
 
+  const thStyle = {
+    padding: '0.75rem 0.75rem',
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    color: '#475569',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    whiteSpace: 'nowrap',
+  };
+
+  const inputBase = {
+    width: '100%',
+    border: '1.5px solid #e2e8f0',
+    borderRadius: '6px',
+    padding: '6px 8px',
+    fontSize: '0.9rem',
+    background: '#fff',
+    boxSizing: 'border-box',
+    outline: 'none',
+  };
+
   return (
     <div style={{ maxWidth: 900 }}>
       <div className="page-header">
-        <h1 className="page-title">✚ Nouveau devis</h1>
-        <Link to="/devis" className="btn btn-secondary">← Retour</Link>
+        <h1 className="page-title">Nouveau devis</h1>
+        <Link to="/devis" className="btn btn-secondary">&#8592; Retour</Link>
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
@@ -157,18 +178,18 @@ const DevisCreate = () => {
         <div className="card" style={{ marginBottom: '1.5rem', padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ margin: 0, color: '#1e293b' }}>Lignes du devis</h3>
-            <button type="button" className="btn btn-secondary" onClick={addLigne}>✚ Ajouter une ligne</button>
+            <button type="button" className="btn btn-secondary" onClick={addLigne}>+ Ajouter une ligne</button>
           </div>
 
           <table className="data-table">
             <thead>
               <tr>
-                <th style={{ width: '25%' }}>Produit (optionnel)</th>
-                <th>Désignation *</th>
-                <th style={{ width: '70px' }}>Qté</th>
-                <th style={{ width: '120px' }}>Prix HT</th>
-                <th style={{ width: '80px' }}>TVA %</th>
-                <th style={{ width: '100px' }}>Total TTC</th>
+                <th style={{ ...thStyle, width: '22%' }}>Produit (optionnel)</th>
+                <th style={thStyle}>Désignation *</th>
+                <th style={{ ...thStyle, width: '80px' }}>Qté</th>
+                <th style={{ ...thStyle, width: '110px' }}>Prix HT</th>
+                <th style={{ ...thStyle, width: '90px' }}>TVA %</th>
+                <th style={{ ...thStyle, width: '110px' }}>Total TTC</th>
                 <th style={{ width: '40px' }}></th>
               </tr>
             </thead>
@@ -188,19 +209,38 @@ const DevisCreate = () => {
                       />
                     </td>
                     <td>
-                      <input value={l.designation} onChange={e => handleLigneChange(i, 'designation', e.target.value)}
-                        className="form-control" placeholder="Description..." required />
+                      <input
+                        value={l.designation}
+                        onChange={e => handleLigneChange(i, 'designation', e.target.value)}
+                        style={inputBase}
+                        placeholder="Description..."
+                        required
+                      />
                     </td>
                     <td>
-                      <input type="number" min="1" value={l.quantite} onChange={e => handleLigneChange(i, 'quantite', e.target.value)}
-                        className="form-control" />
+                      <input
+                        type="number" min="1"
+                        value={l.quantite}
+                        onChange={e => handleLigneChange(i, 'quantite', e.target.value)}
+                        style={{ ...inputBase, textAlign: 'center' }}
+                      />
                     </td>
                     <td>
-                      <input type="number" step="0.01" min="0" value={l.prixUnitaireHT} onChange={e => handleLigneChange(i, 'prixUnitaireHT', e.target.value)}
-                        className="form-control" placeholder="0.00" required />
+                      <input
+                        type="number" step="0.01" min="0"
+                        value={l.prixUnitaireHT}
+                        onChange={e => handleLigneChange(i, 'prixUnitaireHT', e.target.value)}
+                        style={{ ...inputBase, textAlign: 'right' }}
+                        placeholder="0.00"
+                        required
+                      />
                     </td>
                     <td>
-                      <select value={l.tauxTva} onChange={e => handleLigneChange(i, 'tauxTva', e.target.value)} className="form-control">
+                      <select
+                        value={l.tauxTva}
+                        onChange={e => handleLigneChange(i, 'tauxTva', e.target.value)}
+                        style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: '6px', padding: '6px 4px', fontSize: '0.88rem', background: '#fff', cursor: 'pointer' }}
+                      >
                         {tauxTvaList.length > 0
                           ? tauxTvaList.map(t => (
                               <option key={t.id} value={t.valeur}>
@@ -217,7 +257,9 @@ const DevisCreate = () => {
                     <td>
                       {lignes.length > 1 && (
                         <button type="button" onClick={() => removeLigne(i)}
-                          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.1rem', padding: '4px' }}>✕</button>
+                          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.1rem', padding: '4px' }}>
+                          &#x2715;
+                        </button>
                       )}
                     </td>
                   </tr>
@@ -254,7 +296,7 @@ const DevisCreate = () => {
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {submitting ? 'Création...' : '📄 Créer le devis'}
+            {submitting ? 'Création...' : 'Créer le devis'}
           </button>
           <Link to="/devis" className="btn btn-secondary">Annuler</Link>
         </div>

@@ -4,14 +4,21 @@ import {
   Box, Button, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Tooltip, CircularProgress,
   Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, Chip,
-  TextField, InputAdornment
+  TextField, InputAdornment, MenuItem, Select, FormControl, InputLabel,
 } from '@mui/material';
-import { Add as AddIcon, Visibility as VisibilityIcon, Delete as DeleteIcon, Search as SearchIcon } from '@mui/icons-material';
-
+import {
+  Add as AddIcon, Visibility as VisibilityIcon, Delete as DeleteIcon,
+  Search as SearchIcon, Receipt as ReceiptIcon,
+} from '@mui/icons-material';
 import { factureService } from '../../services/factureService';
 import Pagination from '../../components/Pagination';
 
-const STATUTS = ['', 'BROUILLON', 'ENVOYEE', 'PAYEE', 'ANNULEE'];
+const STATUT_CONFIG = {
+  BROUILLON: { label: 'Brouillon', color: 'default' },
+  ENVOYEE:   { label: 'Envoyée',   color: 'info' },
+  PAYEE:     { label: 'Payée',     color: 'success' },
+  ANNULEE:   { label: 'Annulée',   color: 'error' },
+};
 
 const FactureList = () => {
   const [factures, setFactures] = useState([]);
@@ -19,7 +26,7 @@ const FactureList = () => {
   const [selectedStatut, setSelectedStatut] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
 
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [factureToDelete, setFactureToDelete] = useState(null);
@@ -41,7 +48,7 @@ const FactureList = () => {
     }
   };
 
-  const handleStatutChange = (s) => {
+  const handleStatutFilter = (s) => {
     setSelectedStatut(s);
     setCurrentPage(1);
     fetchFactures(s);
@@ -68,33 +75,35 @@ const FactureList = () => {
     setSnackbar({ open: true, message, severity });
   };
 
-  const getStatutColor = (statut) => {
-    switch (statut) {
-      case 'PAYEE': return 'success';
-      case 'ENVOYEE': return 'info';
-      case 'ANNULEE': return 'error';
-      case 'BROUILLON': default: return 'default';
-    }
-  };
-
-  const filteredFactures = factures.filter(f => {
+  const filtered = factures.filter(f => {
     const term = searchTerm.toLowerCase();
     return (
-      f.numero?.toLowerCase().includes(term) ||
-      f.client?.nom?.toLowerCase().includes(term)
+      (f.numero || '').toLowerCase().includes(term) ||
+      (f.client?.nom || '').toLowerCase().includes(term)
     );
   });
 
-  const totalPages = Math.ceil(filteredFactures.length / itemsPerPage);
-  const paginatedFactures = filteredFactures.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <Box sx={{ p: 3 }}>
+      {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Gestion des Factures</Typography>
-        <Button 
-          variant="contained" 
-          startIcon={<AddIcon />} 
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <ReceiptIcon sx={{ fontSize: 32, color: '#4f46e5' }} />
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 'bold', lineHeight: 1 }}>
+              Factures
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#64748b', mt: 0.3 }}>
+              Gérez et suivez vos factures clients
+            </Typography>
+          </Box>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
           onClick={() => navigate('/factures/nouvelle')}
           sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' } }}
         >
@@ -102,37 +111,31 @@ const FactureList = () => {
         </Button>
       </Box>
 
-      <Box sx={{ mb: 2 }}>
+      {/* Search + Filter */}
+      <Paper sx={{ mb: 3, p: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
         <TextField
-          fullWidth
-          size="small"
+          sx={{ flex: 1 }}
+          variant="outlined"
           placeholder="Rechercher par numéro ou client..."
           value={searchTerm}
           onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
-              </InputAdornment>
-            ),
-          }}
-          sx={{ maxWidth: 400 }}
+          size="small"
+          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
         />
-      </Box>
-
-      <Box sx={{ mb: 3, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-        {STATUTS.map(s => (
-          <Button
-            key={s}
-            variant={selectedStatut === s ? 'contained' : 'outlined'}
-            onClick={() => handleStatutChange(s)}
-            size="small"
-            sx={{ borderRadius: 2 }}
+        <FormControl size="small" sx={{ minWidth: 160 }}>
+          <InputLabel>Statut</InputLabel>
+          <Select
+            value={selectedStatut}
+            label="Statut"
+            onChange={(e) => handleStatutFilter(e.target.value)}
           >
-            {s || 'Toutes'}
-          </Button>
-        ))}
-      </Box>
+            <MenuItem value="">Tous</MenuItem>
+            {Object.entries(STATUT_CONFIG).map(([k, v]) => (
+              <MenuItem key={k} value={k}>{v.label}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Paper>
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
@@ -154,55 +157,61 @@ const FactureList = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {paginatedFactures.map((f) => (
-                  <TableRow key={f.id} hover>
-                    <TableCell><Typography variant="body2" sx={{ fontWeight: 'bold', color: '#6366f1' }}>{f.numero}</Typography></TableCell>
-                    <TableCell>{f.client?.nom}</TableCell>
-                    <TableCell>{f.dateEmission ? new Date(f.dateEmission).toLocaleDateString('fr-FR') : '-'}</TableCell>
-                    <TableCell>{f.dateEcheance ? new Date(f.dateEcheance).toLocaleDateString('fr-FR') : '-'}</TableCell>
-                    <TableCell><Typography variant="body2" sx={{ fontWeight: 'bold' }}>{Number(f.totalTTC || 0).toFixed(2)} TND</Typography></TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={f.statut} 
-                        size="small" 
-                        color={getStatutColor(f.statut)}
-                        sx={{ fontWeight: 'bold', fontSize: '0.75rem', height: '24px' }}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
-                        <Tooltip title="Voir la facture">
-                          <IconButton color="primary" onClick={() => navigate(`/factures/${f.id}`)} size="small">
-                            <VisibilityIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        {f.statut !== 'PAYEE' && f.statut !== 'ANNULEE' && (
-                          <Tooltip title="Supprimer">
-                            <IconButton color="error" onClick={() => confirmDelete(f)} size="small">
-                              <DeleteIcon fontSize="small" />
+                {paginated.map((f) => {
+                  const statutCfg = STATUT_CONFIG[f.statut] || { label: f.statut, color: 'default' };
+                  return (
+                    <TableRow key={f.id} hover>
+                      <TableCell>
+                        <Typography sx={{ fontWeight: 600, color: '#4f46e5' }}>{f.numero}</Typography>
+                      </TableCell>
+                      <TableCell>{f.client?.nom}</TableCell>
+                      <TableCell>{f.dateEmission ? new Date(f.dateEmission).toLocaleDateString('fr-FR') : '—'}</TableCell>
+                      <TableCell>{f.dateEcheance ? new Date(f.dateEcheance).toLocaleDateString('fr-FR') : '—'}</TableCell>
+                      <TableCell>
+                        <Typography sx={{ fontWeight: 600 }}>
+                          {Number(f.totalTTC || 0).toLocaleString('fr-TN', { minimumFractionDigits: 3 })} TND
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip label={statutCfg.label} color={statutCfg.color} size="small" />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                          <Tooltip title="Voir la facture">
+                            <IconButton color="primary" onClick={() => navigate(`/factures/${f.id}`)}>
+                              <VisibilityIcon />
                             </IconButton>
                           </Tooltip>
-                        )}
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredFactures.length === 0 && (
+                          {f.statut !== 'PAYEE' && f.statut !== 'ANNULEE' && (
+                            <Tooltip title="Supprimer">
+                              <IconButton color="error" onClick={() => confirmDelete(f)}>
+                                <DeleteIcon />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} align="center">Aucune facture trouvée</TableCell>
+                    <TableCell colSpan={7} align="center" sx={{ py: 4, color: '#94a3b8' }}>
+                      Aucune facture trouvée
+                    </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
           </TableContainer>
-          
-          {filteredFactures.length > 0 && (
+
+          {filtered.length > 0 && (
             <Box sx={{ mt: 2 }}>
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPageChange={setCurrentPage}
-                totalItems={factures.length}
+                totalItems={filtered.length}
                 pageSize={itemsPerPage}
               />
             </Box>
@@ -213,7 +222,7 @@ const FactureList = () => {
       <Dialog open={openConfirmDialog} onClose={() => setOpenConfirmDialog(false)}>
         <DialogTitle>Confirmer la suppression</DialogTitle>
         <DialogContent>
-          <Typography>Êtes-vous sûr de vouloir supprimer la facture "{factureToDelete?.numero}" ?</Typography>
+          <Typography>Supprimer la facture <strong>{factureToDelete?.numero}</strong> ?</Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenConfirmDialog(false)} color="inherit">Annuler</Button>

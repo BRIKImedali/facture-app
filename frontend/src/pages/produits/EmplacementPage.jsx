@@ -7,6 +7,7 @@ import {
   Select, MenuItem, FormControl, InputLabel
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
+import { MapPin } from 'lucide-react';
 
 import { emplacementService } from '../../services/emplacementService';
 import { siteService } from '../../services/siteService';
@@ -71,7 +72,13 @@ export default function EmplacementPage() {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>📍 Emplacements</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <MapPin size={32} color="#4f46e5" />
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 'bold', lineHeight: 1 }}>Emplacements</Typography>
+            <Typography variant="body2" sx={{ color: '#64748b', mt: 0.3 }}>Gérez les emplacements de stockage</Typography>
+          </Box>
+        </Box>
         <Button 
           variant="contained" 
           startIcon={<AddIcon />} 

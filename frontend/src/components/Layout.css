@@ -161,6 +161,9 @@
   font-weight: 500;
   transition: all 0.2s ease;
   font-family: 'Inter', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-logout:hover {

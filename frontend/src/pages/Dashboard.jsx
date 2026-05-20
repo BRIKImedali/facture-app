@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { factureService } from '../services/factureService';
 import { AuthContext } from '../context/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BookUser, Layers, Receipt, TrendingUp, UserPlus, PackagePlus, FilePlus } from 'lucide-react';
 import '../components/Layout.css';
 
 const StatCard = ({ icon, label, value, color }) => (
@@ -10,7 +11,7 @@ const StatCard = ({ icon, label, value, color }) => (
     <div style={{
       width: 56, height: 56, borderRadius: 14,
       background: color, display: 'flex', alignItems: 'center',
-      justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0
+      justifyContent: 'center', flexShrink: 0
     }}>
       {icon}
     </div>
@@ -29,22 +30,18 @@ const Dashboard = () => {
 
   useEffect(() => {
     const load = async () => {
-      // Stats et factures sont chargées indépendamment :
-      // si l'une échoue, l'autre s'affiche quand même.
       try {
         const statsRes = await factureService.getStats();
         setStats(statsRes.data);
       } catch (err) {
         console.error('Erreur chargement stats dashboard', err);
       }
-
       try {
         const facturesRes = await factureService.getAll();
         setRecentFactures(facturesRes.data.slice(0, 5));
       } catch (err) {
         console.error('Erreur chargement factures récentes', err);
       }
-
       setLoading(false);
     };
     load();
@@ -57,12 +54,39 @@ const Dashboard = () => {
     return <span className={`badge badge-${map[s] || ''}`}>{s}</span>;
   };
 
+  const shortcuts = [
+    {
+      to: '/clients/nouveau',
+      icon: <UserPlus size={22} color="#3b82f6" />,
+      label: 'Ajouter un client',
+      sub: 'Gérer votre portefeuille',
+      color: 'linear-gradient(135deg, #dbeafe, #bfdbfe)',
+      adminOnly: true,
+    },
+    {
+      to: '/produits/nouveau',
+      icon: <PackagePlus size={22} color="#d97706" />,
+      label: 'Ajouter un produit',
+      sub: 'Enrichir votre catalogue',
+      color: 'linear-gradient(135deg, #fef9c3, #fde68a)',
+      adminOnly: true,
+    },
+    {
+      to: '/factures/nouvelle',
+      icon: <FilePlus size={22} color="#7c3aed" />,
+      label: 'Nouvelle facture',
+      sub: 'Facturer en 2 minutes',
+      color: 'linear-gradient(135deg, #ede9fe, #ddd6fe)',
+      adminOnly: false,
+    },
+  ];
+
   return (
     <div>
       {/* En-tête */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Tableau de bord 📊</h1>
+          <h1 className="page-title">Tableau de bord</h1>
           <p className="page-subtitle">Bonjour, <strong>{user?.nom} {user?.prenom}</strong> — voici votre aperçu du jour.</p>
         </div>
         <Link to="/factures/nouvelle" className="btn btn-primary">
@@ -72,11 +96,31 @@ const Dashboard = () => {
 
       {/* Statistiques */}
       <div style={{ display: 'grid', gridTemplateColumns: user?.role === 'ADMIN' ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', gap: '1.25rem', marginBottom: '2rem' }}>
-        <StatCard icon="👥" label="Clients" value={stats?.totalClients ?? 0} color="linear-gradient(135deg, #dbeafe, #bfdbfe)" />
-        <StatCard icon="📦" label="Produits" value={stats?.totalProduits ?? 0} color="linear-gradient(135deg, #fef9c3, #fde68a)" />
-        <StatCard icon="🧾" label="Factures" value={stats?.totalFactures ?? 0} color="linear-gradient(135deg, #ede9fe, #ddd6fe)" />
+        <StatCard
+          icon={<BookUser size={28} color="#2563eb" />}
+          label="Clients"
+          value={stats?.totalClients ?? 0}
+          color="linear-gradient(135deg, #dbeafe, #bfdbfe)"
+        />
+        <StatCard
+          icon={<Layers size={28} color="#d97706" />}
+          label="Produits"
+          value={stats?.totalProduits ?? 0}
+          color="linear-gradient(135deg, #fef9c3, #fde68a)"
+        />
+        <StatCard
+          icon={<Receipt size={28} color="#7c3aed" />}
+          label="Factures"
+          value={stats?.totalFactures ?? 0}
+          color="linear-gradient(135deg, #ede9fe, #ddd6fe)"
+        />
         {user?.role === 'ADMIN' && (
-          <StatCard icon="💰" label="CA encaissé" value={`${Number(stats?.chiffreAffaires ?? 0).toFixed(2)} TND`} color="linear-gradient(135deg, #dcfce7, #bbf7d0)" />
+          <StatCard
+            icon={<TrendingUp size={28} color="#059669" />}
+            label="CA encaissé"
+            value={`${Number(stats?.chiffreAffaires ?? 0).toFixed(2)} TND`}
+            color="linear-gradient(135deg, #dcfce7, #bbf7d0)"
+          />
         )}
       </div>
 
@@ -99,7 +143,7 @@ const Dashboard = () => {
                   <Tooltip
                     cursor={{ fill: '#f8fafc' }}
                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
-                    formatter={(value) => [`${value} TND`, 'Chiffre d\'affaires']}
+                    formatter={(value) => [`${value} TND`, "Chiffre d'affaires"]}
                   />
                   <Bar dataKey="ca" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40} />
                 </BarChart>
@@ -140,7 +184,9 @@ const Dashboard = () => {
 
         {recentFactures.length === 0 ? (
           <div className="empty-state" style={{ padding: '2rem' }}>
-            <div className="empty-icon">🧾</div>
+            <div className="empty-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
+              <Receipt size={48} color="#c4b5fd" />
+            </div>
             <h3>Aucune facture</h3>
             <p>Créez votre première facture pour commencer.</p>
             <Link to="/factures/nouvelle" className="btn btn-primary">Créer une facture</Link>
@@ -179,16 +225,17 @@ const Dashboard = () => {
 
       {/* Raccourcis */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginTop: '1.5rem' }}>
-        {[
-          { to: '/clients/nouveau', icon: '➕', label: 'Ajouter un client', sub: 'Gérer votre portefeuille', color: '#dbeafe', adminOnly: true },
-          { to: '/produits/nouveau', icon: '📦', label: 'Ajouter un produit', sub: 'Enrichir votre catalogue', color: '#fef9c3', adminOnly: true },
-          { to: '/factures/nouvelle', icon: '🧾', label: 'Nouvelle facture', sub: 'Facturer en 2 minutes', color: '#ede9fe', adminOnly: false },
-        ].filter(item => !item.adminOnly || user?.role === 'ADMIN').map(({ to, icon, label, sub, color }) => (
+        {shortcuts.filter(item => !item.adminOnly || user?.role === 'ADMIN').map(({ to, icon, label, sub, color }) => (
           <Link to={to} key={to} style={{ textDecoration: 'none' }}>
-            <div className="card" style={{ display: 'flex', gap: '1rem', alignItems: 'center', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+            <div
+              className="card"
+              style={{ display: 'flex', gap: '1rem', alignItems: 'center', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>{icon}</div>
+              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
+            >
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {icon}
+              </div>
               <div>
                 <p style={{ margin: 0, fontWeight: 700, color: '#1e293b', fontSize: '0.9rem' }}>{label}</p>
                 <p style={{ margin: 0, fontSize: '0.78rem', color: '#94a3b8' }}>{sub}</p>

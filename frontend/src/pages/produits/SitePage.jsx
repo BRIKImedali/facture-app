@@ -6,6 +6,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
+import { Building2 } from 'lucide-react';
 
 import { siteService } from '../../services/siteService';
 import Pagination from '../../components/Pagination';
@@ -66,7 +67,13 @@ export default function SitePage() {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>🏭 Sites</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Building2 size={32} color="#4f46e5" />
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 'bold', lineHeight: 1 }}>Sites</Typography>
+            <Typography variant="body2" sx={{ color: '#64748b', mt: 0.3 }}>Gérez vos sites et entrepôts</Typography>
+          </Box>
+        </Box>
         <Button 
           variant="contained" 
           startIcon={<AddIcon />} 

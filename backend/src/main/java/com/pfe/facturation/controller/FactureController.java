@@ -94,6 +94,35 @@ public class FactureController {
                 .body(factureService.creerDepuisBonsLivraison(request, currentUser));
     }
 
+    @PostMapping("/depuis-commande/{commandeId}")
+    @PreAuthorize("hasPermission('FACTURE', 'CREATE')")
+    @Operation(summary = "Créer une facture depuis une commande (action manuelle)")
+    public ResponseEntity<FactureResponseDTO> createFromCommande(
+            @PathVariable Long commandeId,
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(factureService.creerDepuisCommandeId(commandeId, currentUser));
+    }
+
+    @PostMapping("/depuis-bl/{blId}")
+    @PreAuthorize("hasPermission('FACTURE', 'CREATE')")
+    @Operation(summary = "Créer une facture depuis un seul bon de livraison livré")
+    public ResponseEntity<FactureResponseDTO> createFromSingleBL(
+            @PathVariable Long blId,
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(factureService.creerDepuisUnBL(blId, currentUser));
+    }
+
+    @GetMapping("/commande/{commandeId}")
+    @PreAuthorize("hasPermission('FACTURE', 'READ')")
+    @Operation(summary = "Récupérer la facture liée à une commande (null si aucune)")
+    public ResponseEntity<FactureResponseDTO> findByCommande(@PathVariable Long commandeId) {
+        return factureService.findByCommande(commandeId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.noContent().build());
+    }
+
     @PatchMapping("/{id}/statut")
     @PreAuthorize("hasPermission('FACTURE', 'UPDATE')")
     @Operation(summary = "Changer le statut d'une facture (ex: ENVOYEE, PAYEE, ANNULEE)")

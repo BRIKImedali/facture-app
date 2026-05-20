@@ -40,6 +40,7 @@ const CommandeEdit = () => {
         quantite: l.quantite,
         prixUnitaireHT: l.prixUnitaireHT,
         tauxTva: l.tauxTva,
+        remiseLigne: l.remiseLigne || 0,
       })));
       setProduits(pRes.data);
     }).catch(() => toast.error('Erreur de chargement.')).finally(() => setLoading(false));
@@ -62,14 +63,17 @@ const CommandeEdit = () => {
     setLignes(updated);
   };
 
-  const addLigne = () => setLignes([...lignes, { produitId: '', designation: '', quantite: 1, prixUnitaireHT: '', tauxTva: 19 }]);
+  const addLigne = () => setLignes([...lignes, { produitId: '', designation: '', quantite: 1, prixUnitaireHT: '', tauxTva: 19, remiseLigne: 0 }]);
   const removeLigne = (index) => setLignes(lignes.filter((_, i) => i !== index));
 
   const calcLigne = (l) => {
-    const ht = (parseFloat(l.quantite) || 0) * (parseFloat(l.prixUnitaireHT) || 0);
+    const htBrut = (parseFloat(l.quantite) || 0) * (parseFloat(l.prixUnitaireHT) || 0);
+    const remisePctLigne = parseFloat(l.remiseLigne) || 0;
+    const ht = htBrut * (1 - remisePctLigne / 100);
     const tva = ht * (parseFloat(l.tauxTva) || 0) / 100;
-    return { ht, tva, ttc: ht + tva };
+    return { htBrut, ht, tva, ttc: ht + tva };
   };
+
   const totaux = lignes.reduce((acc, l) => {
     const t = calcLigne(l);
     return { ht: acc.ht + t.ht, tva: acc.tva + t.tva, ttc: acc.ttc + t.ttc };
@@ -97,6 +101,7 @@ const CommandeEdit = () => {
           quantite: parseInt(l.quantite),
           prixUnitaireHT: parseFloat(l.prixUnitaireHT),
           tauxTva: parseFloat(l.tauxTva),
+          remiseLigne: parseFloat(l.remiseLigne) > 0 ? parseFloat(l.remiseLigne) : null,
         })),
       });
       toast.success('Commande mise à jour !');
@@ -109,11 +114,32 @@ const CommandeEdit = () => {
 
   if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Chargement...</div>;
 
+  const thStyle = {
+    padding: '0.75rem 0.75rem',
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    color: '#475569',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    whiteSpace: 'nowrap',
+  };
+
+  const inputBase = {
+    width: '100%',
+    border: '1.5px solid #e2e8f0',
+    borderRadius: '6px',
+    padding: '6px 8px',
+    fontSize: '0.9rem',
+    background: '#fff',
+    boxSizing: 'border-box',
+    outline: 'none',
+  };
+
   return (
-    <div style={{ maxWidth: 900 }}>
+    <div style={{ maxWidth: 960 }}>
       <div className="page-header">
-        <h1 className="page-title">✏️ Modifier la commande</h1>
-        <Link to={`/commandes/${id}`} className="btn btn-secondary">← Retour</Link>
+        <h1 className="page-title">Modifier la commande</h1>
+        <Link to={`/commandes/${id}`} className="btn btn-secondary">&#8592; Retour</Link>
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
@@ -151,24 +177,26 @@ const CommandeEdit = () => {
         <div className="card" style={{ marginBottom: '1.5rem', padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ margin: 0, color: '#1e293b' }}>Lignes de commande</h3>
-            <button type="button" className="btn btn-secondary" onClick={addLigne}>✚ Ajouter une ligne</button>
+            <button type="button" className="btn btn-secondary" onClick={addLigne}>+ Ajouter une ligne</button>
           </div>
 
           <table className="data-table">
             <thead>
               <tr>
-                <th style={{ width: '25%' }}>Produit (optionnel)</th>
-                <th>Désignation *</th>
-                <th style={{ width: '70px' }}>Qté</th>
-                <th style={{ width: '120px' }}>Prix HT</th>
-                <th style={{ width: '80px' }}>TVA %</th>
-                <th style={{ width: '100px' }}>Total TTC</th>
+                <th style={{ ...thStyle, width: '22%' }}>Produit (optionnel)</th>
+                <th style={thStyle}>Désignation *</th>
+                <th style={{ ...thStyle, width: '80px' }}>Qté</th>
+                <th style={{ ...thStyle, width: '110px' }}>Prix HT</th>
+                <th style={{ ...thStyle, width: '90px' }}>Remise %</th>
+                <th style={{ ...thStyle, width: '90px' }}>TVA %</th>
+                <th style={{ ...thStyle, width: '110px' }}>Total TTC</th>
                 <th style={{ width: '40px' }}></th>
               </tr>
             </thead>
             <tbody>
               {lignes.map((l, i) => {
                 const { ttc } = calcLigne(l);
+                const hasRemiseLigne = parseFloat(l.remiseLigne) > 0;
                 return (
                   <tr key={i}>
                     <td>
@@ -181,22 +209,60 @@ const CommandeEdit = () => {
                         placeholder="— Manuel —"
                       />
                     </td>
-                    <td><input value={l.designation} onChange={e => handleLigneChange(i, 'designation', e.target.value)} className="form-control" placeholder="Description..." required /></td>
-                    <td><input type="number" min="1" value={l.quantite} onChange={e => handleLigneChange(i, 'quantite', e.target.value)} className="form-control" /></td>
-                    <td><input type="number" step="0.01" min="0" value={l.prixUnitaireHT} onChange={e => handleLigneChange(i, 'prixUnitaireHT', e.target.value)} className="form-control" placeholder="0.00" required /></td>
                     <td>
-                      <select value={l.tauxTva} onChange={e => handleLigneChange(i, 'tauxTva', e.target.value)} className="form-control">
-                        <option value={0}>0% — Exonéré</option>
-                        <option value={7}>7% — Taux réduit</option>
-                        <option value={13}>13% — Taux intermédiaire</option>
-                        <option value={19}>19% — Taux normal</option>
+                      <input
+                        value={l.designation}
+                        onChange={e => handleLigneChange(i, 'designation', e.target.value)}
+                        style={inputBase}
+                        placeholder="Description..."
+                        required
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number" min="1"
+                        value={l.quantite}
+                        onChange={e => handleLigneChange(i, 'quantite', e.target.value)}
+                        style={{ ...inputBase, textAlign: 'center' }}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number" step="0.01" min="0"
+                        value={l.prixUnitaireHT}
+                        onChange={e => handleLigneChange(i, 'prixUnitaireHT', e.target.value)}
+                        style={{ ...inputBase, textAlign: 'right' }}
+                        placeholder="0.00"
+                        required
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number" min="0" max="100" step="0.5"
+                        value={l.remiseLigne || 0}
+                        onChange={e => handleLigneChange(i, 'remiseLigne', e.target.value)}
+                        style={{ ...inputBase, textAlign: 'center', color: hasRemiseLigne ? '#d97706' : undefined, fontWeight: hasRemiseLigne ? 600 : undefined }}
+                      />
+                    </td>
+                    <td>
+                      <select
+                        value={l.tauxTva}
+                        onChange={e => handleLigneChange(i, 'tauxTva', e.target.value)}
+                        style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: '6px', padding: '6px 4px', fontSize: '0.88rem', background: '#fff', cursor: 'pointer' }}
+                      >
+                        <option value={0}>0%</option>
+                        <option value={7}>7%</option>
+                        <option value={13}>13%</option>
+                        <option value={19}>19%</option>
                       </select>
                     </td>
                     <td><strong>{ttc.toFixed(2)}</strong></td>
                     <td>
                       {lignes.length > 1 && (
                         <button type="button" onClick={() => removeLigne(i)}
-                          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.1rem', padding: '4px' }}>✕</button>
+                          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.1rem', padding: '4px' }}>
+                          &#x2715;
+                        </button>
                       )}
                     </td>
                   </tr>
@@ -206,25 +272,25 @@ const CommandeEdit = () => {
           </table>
 
           <div style={{ padding: '1rem 1.5rem', background: '#f8fafc', borderTop: '2px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
-            <div style={{ textAlign: 'right', minWidth: 240 }}>
+            <div style={{ textAlign: 'right', minWidth: 260 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginBottom: '0.3rem', fontSize: '0.875rem', color: '#64748b' }}>
-                <span>Total HT :</span><span>{totaux.ht.toFixed(2)} TND</span>
+                <span>Total HT :</span><span>{totaux.ht.toFixed(3)} TND</span>
               </div>
               {remisePct > 0 && (
                 <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginBottom: '0.3rem', fontSize: '0.875rem', color: '#f59e0b' }}>
-                    <span>Remise ({remisePct}%) :</span><span>-{(totaux.ht * remisePct / 100).toFixed(2)} TND</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginBottom: '0.3rem', fontSize: '0.875rem', color: '#d97706', fontWeight: 600 }}>
+                    <span>Remise globale ({remisePct}%) :</span><span>-{(totaux.ht * remisePct / 100).toFixed(3)} TND</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginBottom: '0.3rem', fontSize: '0.875rem', color: '#64748b' }}>
-                    <span>HT après remise :</span><span>{htApresRemise.toFixed(2)} TND</span>
+                    <span>HT après remise :</span><span>{htApresRemise.toFixed(3)} TND</span>
                   </div>
                 </>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginBottom: '0.3rem', fontSize: '0.875rem', color: '#64748b' }}>
-                <span>Total TVA :</span><span>{tvaApresRemise.toFixed(2)} TND</span>
+                <span>Total TVA :</span><span>{tvaApresRemise.toFixed(3)} TND</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', fontSize: '1.1rem', fontWeight: 700, color: '#1e293b', borderTop: '1px solid #e2e8f0', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
-                <span>Total TTC :</span><span>{ttcFinal.toFixed(2)} TND</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', fontSize: '1.1rem', fontWeight: 700, color: '#1e293b', borderTop: '2px solid #e2e8f0', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
+                <span>Total TTC :</span><span style={{ color: '#4f46e5' }}>{ttcFinal.toFixed(3)} TND</span>
               </div>
             </div>
           </div>
@@ -232,7 +298,7 @@ const CommandeEdit = () => {
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {submitting ? 'Enregistrement...' : '💾 Enregistrer les modifications'}
+            {submitting ? 'Enregistrement...' : 'Enregistrer les modifications'}
           </button>
           <Link to={`/commandes/${id}`} className="btn btn-secondary">Annuler</Link>
         </div>

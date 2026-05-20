@@ -28,6 +28,7 @@ public record CommandeDTO(
             Integer quantite,
             BigDecimal prixUnitaireHT,
             Double tauxTva,
+            BigDecimal remiseLigne,
             BigDecimal montantHT,
             BigDecimal montantTva,
             BigDecimal montantTTC

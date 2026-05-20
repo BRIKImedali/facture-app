@@ -52,6 +52,11 @@ public class Facture {
     @JoinColumn(name = "user_id")
     private User createdBy;
 
+    /** Commande source (nullable — renseigné si créée depuis une commande) */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "commande_id")
+    private Commande commande;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

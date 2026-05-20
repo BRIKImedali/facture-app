@@ -4,14 +4,22 @@ import {
   Box, Button, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Tooltip, CircularProgress,
   Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, Chip,
-  TextField, InputAdornment
+  TextField, InputAdornment, MenuItem, Select, FormControl, InputLabel,
 } from '@mui/material';
-import { Add as AddIcon, Visibility as VisibilityIcon, Delete as DeleteIcon, Search as SearchIcon } from '@mui/icons-material';
-
+import {
+  Add as AddIcon, Visibility as VisibilityIcon, Delete as DeleteIcon,
+  Search as SearchIcon, Description as DescriptionIcon,
+} from '@mui/icons-material';
 import { devisService } from '../../services/devisService';
 import Pagination from '../../components/Pagination';
 
-const STATUTS = ['', 'BROUILLON', 'ENVOYE', 'ACCEPTE', 'REFUSE', 'EXPIRE'];
+const STATUT_CONFIG = {
+  BROUILLON: { label: 'Brouillon', color: 'default' },
+  ENVOYE:    { label: 'Envoyé',    color: 'info' },
+  ACCEPTE:   { label: 'Accepté',   color: 'success' },
+  REFUSE:    { label: 'Refusé',    color: 'error' },
+  EXPIRE:    { label: 'Expiré',    color: 'warning' },
+};
 
 const DevisList = () => {
   const [devisList, setDevisList] = useState([]);
@@ -19,7 +27,7 @@ const DevisList = () => {
   const [selectedStatut, setSelectedStatut] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
 
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [devisToDelete, setDevisToDelete] = useState(null);
@@ -41,7 +49,7 @@ const DevisList = () => {
     }
   };
 
-  const handleStatutChange = (s) => {
+  const handleStatutFilter = (s) => {
     setSelectedStatut(s);
     setCurrentPage(1);
     fetchDevis(s);
@@ -68,34 +76,35 @@ const DevisList = () => {
     setSnackbar({ open: true, message, severity });
   };
 
-  const getStatutColor = (statut) => {
-    switch (statut) {
-      case 'ACCEPTE': return 'success';
-      case 'ENVOYE': return 'info';
-      case 'REFUSE': 
-      case 'EXPIRE': return 'error';
-      case 'BROUILLON': default: return 'default';
-    }
-  };
-
-  const filteredDevis = devisList.filter(d => {
+  const filtered = devisList.filter(d => {
     const term = searchTerm.toLowerCase();
     return (
-      d.reference?.toLowerCase().includes(term) ||
-      d.client?.nom?.toLowerCase().includes(term)
+      (d.reference || '').toLowerCase().includes(term) ||
+      (d.client?.nom || '').toLowerCase().includes(term)
     );
   });
 
-  const totalPages = Math.ceil(filteredDevis.length / itemsPerPage);
-  const paginatedDevis = filteredDevis.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <Box sx={{ p: 3 }}>
+      {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Gestion des Devis</Typography>
-        <Button 
-          variant="contained" 
-          startIcon={<AddIcon />} 
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <DescriptionIcon sx={{ fontSize: 32, color: '#4f46e5' }} />
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 'bold', lineHeight: 1 }}>
+              Devis
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#64748b', mt: 0.3 }}>
+              Gérez vos devis et propositions commerciales
+            </Typography>
+          </Box>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
           onClick={() => navigate('/devis/nouveau')}
           sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' } }}
         >
@@ -103,37 +112,31 @@ const DevisList = () => {
         </Button>
       </Box>
 
-      <Box sx={{ mb: 2 }}>
+      {/* Search + Filter */}
+      <Paper sx={{ mb: 3, p: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
         <TextField
-          fullWidth
-          size="small"
+          sx={{ flex: 1 }}
+          variant="outlined"
           placeholder="Rechercher par référence ou client..."
           value={searchTerm}
           onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
-              </InputAdornment>
-            ),
-          }}
-          sx={{ maxWidth: 400 }}
+          size="small"
+          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
         />
-      </Box>
-
-      <Box sx={{ mb: 3, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-        {STATUTS.map(s => (
-          <Button
-            key={s}
-            variant={selectedStatut === s ? 'contained' : 'outlined'}
-            onClick={() => handleStatutChange(s)}
-            size="small"
-            sx={{ borderRadius: 2 }}
+        <FormControl size="small" sx={{ minWidth: 160 }}>
+          <InputLabel>Statut</InputLabel>
+          <Select
+            value={selectedStatut}
+            label="Statut"
+            onChange={(e) => handleStatutFilter(e.target.value)}
           >
-            {s || 'Tous'}
-          </Button>
-        ))}
-      </Box>
+            <MenuItem value="">Tous</MenuItem>
+            {Object.entries(STATUT_CONFIG).map(([k, v]) => (
+              <MenuItem key={k} value={k}>{v.label}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Paper>
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
@@ -147,7 +150,7 @@ const DevisList = () => {
                 <TableRow>
                   <TableCell><b>Référence</b></TableCell>
                   <TableCell><b>Client</b></TableCell>
-                  <TableCell><b>Date Devis</b></TableCell>
+                  <TableCell><b>Date devis</b></TableCell>
                   <TableCell><b>Expiration</b></TableCell>
                   <TableCell><b>Total TTC</b></TableCell>
                   <TableCell><b>Statut</b></TableCell>
@@ -155,55 +158,61 @@ const DevisList = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {paginatedDevis.map((d) => (
-                  <TableRow key={d.id} hover>
-                    <TableCell><Typography variant="body2" sx={{ fontWeight: 'bold', color: '#6366f1' }}>{d.reference}</Typography></TableCell>
-                    <TableCell>{d.client?.nom}</TableCell>
-                    <TableCell>{d.dateDevis ? new Date(d.dateDevis).toLocaleDateString('fr-FR') : '-'}</TableCell>
-                    <TableCell>{d.dateExpiration ? new Date(d.dateExpiration).toLocaleDateString('fr-FR') : '-'}</TableCell>
-                    <TableCell><Typography variant="body2" sx={{ fontWeight: 'bold' }}>{Number(d.totalTTC || 0).toFixed(2)} TND</Typography></TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={d.statut} 
-                        size="small" 
-                        color={getStatutColor(d.statut)}
-                        sx={{ fontWeight: 'bold', fontSize: '0.75rem', height: '24px' }}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
-                        <Tooltip title="Voir le devis">
-                          <IconButton color="primary" onClick={() => navigate(`/devis/${d.id}`)} size="small">
-                            <VisibilityIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        {d.statut !== 'ACCEPTE' && d.statut !== 'REFUSE' && (
-                          <Tooltip title="Supprimer">
-                            <IconButton color="error" onClick={() => confirmDelete(d)} size="small">
-                              <DeleteIcon fontSize="small" />
+                {paginated.map((d) => {
+                  const statutCfg = STATUT_CONFIG[d.statut] || { label: d.statut, color: 'default' };
+                  return (
+                    <TableRow key={d.id} hover>
+                      <TableCell>
+                        <Typography sx={{ fontWeight: 600, color: '#4f46e5' }}>{d.reference}</Typography>
+                      </TableCell>
+                      <TableCell>{d.client?.nom}</TableCell>
+                      <TableCell>{d.dateDevis ? new Date(d.dateDevis).toLocaleDateString('fr-FR') : '—'}</TableCell>
+                      <TableCell>{d.dateExpiration ? new Date(d.dateExpiration).toLocaleDateString('fr-FR') : '—'}</TableCell>
+                      <TableCell>
+                        <Typography sx={{ fontWeight: 600 }}>
+                          {Number(d.totalTTC || 0).toLocaleString('fr-TN', { minimumFractionDigits: 3 })} TND
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip label={statutCfg.label} color={statutCfg.color} size="small" />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                          <Tooltip title="Voir le devis">
+                            <IconButton color="primary" onClick={() => navigate(`/devis/${d.id}`)}>
+                              <VisibilityIcon />
                             </IconButton>
                           </Tooltip>
-                        )}
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredDevis.length === 0 && (
+                          {d.statut !== 'ACCEPTE' && d.statut !== 'REFUSE' && (
+                            <Tooltip title="Supprimer">
+                              <IconButton color="error" onClick={() => confirmDelete(d)}>
+                                <DeleteIcon />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} align="center">Aucun devis trouvé</TableCell>
+                    <TableCell colSpan={7} align="center" sx={{ py: 4, color: '#94a3b8' }}>
+                      Aucun devis trouvé
+                    </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
           </TableContainer>
-          
-          {filteredDevis.length > 0 && (
+
+          {filtered.length > 0 && (
             <Box sx={{ mt: 2 }}>
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPageChange={setCurrentPage}
-                totalItems={devisList.length}
+                totalItems={filtered.length}
                 pageSize={itemsPerPage}
               />
             </Box>
@@ -214,7 +223,7 @@ const DevisList = () => {
       <Dialog open={openConfirmDialog} onClose={() => setOpenConfirmDialog(false)}>
         <DialogTitle>Confirmer la suppression</DialogTitle>
         <DialogContent>
-          <Typography>Êtes-vous sûr de vouloir supprimer le devis "{devisToDelete?.reference}" ?</Typography>
+          <Typography>Supprimer le devis <strong>{devisToDelete?.reference}</strong> ?</Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenConfirmDialog(false)} color="inherit">Annuler</Button>

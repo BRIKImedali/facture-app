@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { stockService } from '../../services/stockService';
+import { Button, Box } from '@mui/material';
+import { Edit as EditIcon, ArrowBack as BackIcon } from '@mui/icons-material';
 
 export default function StockDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [stock, setStock] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -16,50 +19,69 @@ export default function StockDetail() {
   }, [id]);
 
   if (loading) return <div className="loading">Chargement…</div>;
-  if (!stock) return <div className="empty-state"><h3>Stock introuvable</h3><Link to="/stock" className="btn btn-primary">Retour</Link></div>;
+  if (!stock) return (
+    <div className="empty-state">
+      <h3>Stock introuvable</h3>
+      <Button variant="contained" onClick={() => navigate('/stock')}>Retour</Button>
+    </div>
+  );
 
   return (
-    <div>
+    <div style={{ maxWidth: 800 }}>
       <div className="page-header">
-        <h1 className="page-title">🗄️ Détail Stock : {stock.produitNom}</h1>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <Link to={`/stock/edit/${stock.id}`} className="btn btn-secondary">✏️ Modifier</Link>
-            <Link to="/stock" className="btn btn-primary">← Retour</Link>
-        </div>
+        <h1 className="page-title">🗄️ {stock.produitNom}</h1>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            startIcon={<EditIcon />}
+            onClick={() => navigate(`/stock/edit/${stock.id}`)}
+            sx={{ borderColor: '#4f46e5', color: '#4f46e5', '&:hover': { borderColor: '#4338ca', bgcolor: '#eef2ff' } }}
+          >
+            Modifier
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<BackIcon />}
+            onClick={() => navigate('/stock')}
+            sx={{ borderColor: '#94a3b8', color: '#475569', '&:hover': { borderColor: '#64748b', bgcolor: '#f8fafc' } }}
+          >
+            Retour
+          </Button>
+        </Box>
       </div>
 
-      <div className="card" style={{ maxWidth: 800 }}>
+      <div className="card">
         <div className="form-grid">
-            <div className="form-group">
-                <label>Produit</label>
-                <div><strong>{stock.produitNom}</strong></div>
+          <div className="form-group">
+            <label style={{ fontWeight: 600, color: '#64748b', fontSize: '0.8rem' }}>PRODUIT</label>
+            <div><strong style={{ fontSize: '1rem' }}>{stock.produitNom}</strong></div>
+          </div>
+          <div className="form-group">
+            <label style={{ fontWeight: 600, color: '#64748b', fontSize: '0.8rem' }}>SITE</label>
+            <div><span className="badge badge-envoyee">{stock.siteNom}</span></div>
+          </div>
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            <label style={{ fontWeight: 600, color: '#64748b', fontSize: '0.8rem' }}>EMPLACEMENT</label>
+            <div>{stock.emplacementLabel || '—'}</div>
+          </div>
+          <div className="form-group">
+            <label style={{ fontWeight: 600, color: '#64748b', fontSize: '0.8rem' }}>QUANTITÉ</label>
+            <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: stock.enAlerte ? '#ef4444' : '#16a34a' }}>
+              {stock.quantite}
             </div>
-            <div className="form-group">
-                <label>Site</label>
-                <div><span className="badge badge-envoyee">{stock.siteNom}</span></div>
+          </div>
+          <div className="form-group">
+            <label style={{ fontWeight: 600, color: '#64748b', fontSize: '0.8rem' }}>SEUIL MINIMUM D'ALERTE</label>
+            <div style={{ fontSize: '1rem', fontWeight: 600 }}>{stock.seuilMinimum}</div>
+          </div>
+          <div className="form-group">
+            <label style={{ fontWeight: 600, color: '#64748b', fontSize: '0.8rem' }}>STATUT</label>
+            <div>
+              {stock.enAlerte
+                ? <span className="badge badge-annulee">⚠️ Alerte stock</span>
+                : <span className="badge badge-payee">✓ Niveau OK</span>}
             </div>
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Emplacement</label>
-                <div>{stock.emplacementLabel || '—'}</div>
-            </div>
-            <div className="form-group">
-                <label>Quantité</label>
-                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: stock.enAlerte ? '#ef4444' : '#16a34a' }}>
-                    {stock.quantite}
-                </div>
-            </div>
-            <div className="form-group">
-                <label>Seuil Minimum d'Alerte</label>
-                <div>{stock.seuilMinimum}</div>
-            </div>
-            <div className="form-group">
-                <label>Statut</label>
-                <div>
-                  {stock.enAlerte
-                    ? <span className="badge badge-annulee">⚠️ Alerte</span>
-                    : <span className="badge badge-payee">✓ OK</span>}
-                </div>
-            </div>
+          </div>
         </div>
       </div>
     </div>

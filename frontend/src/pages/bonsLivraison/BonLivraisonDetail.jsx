@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import {
+  Dialog, DialogTitle, DialogContent, DialogActions,
+  Button, Typography, TextField, Box, CircularProgress,
+} from '@mui/material';
 import { bonLivraisonService } from '../../services/bonLivraisonService';
+import { factureService } from '../../services/factureService';
 import usePermission from '../../hooks/usePermission';
 import api from '../../services/api';
 
@@ -25,12 +30,21 @@ const BonLivraisonDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { hasPermission } = usePermission();
-  const canUpdate = hasPermission('BON_LIVRAISON:UPDATE');
+  const canUpdate  = hasPermission('BON_LIVRAISON:UPDATE');
+  const canFacture = hasPermission('FACTURE:CREATE');
 
   const [bl, setBl] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [facturing, setFacturing] = useState(false);
+
+  // Dialog changement de statut
+  const [statutDialog, setStatutDialog] = useState({ open: false, cible: null });
+  const [dateLivraison, setDateLivraison] = useState('');
+  const [updating, setUpdating] = useState(false);
+
+  // Dialog facturer
+  const [factureDialog, setFactureDialog] = useState(false);
 
   useEffect(() => {
     bonLivraisonService.getById(id)
@@ -39,17 +53,45 @@ const BonLivraisonDetail = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const handleStatutChange = async (nouveauStatut) => {
-    if (!window.confirm(`Passer le BL au statut "${STATUT_CONFIG[nouveauStatut]?.label}" ?`)) return;
+  const openStatutDialog = (cible) => {
+    setDateLivraison('');
+    setStatutDialog({ open: true, cible });
+  };
+
+  const handleStatutChange = async () => {
+    const { cible } = statutDialog;
     setUpdating(true);
     try {
-      const res = await bonLivraisonService.updateStatut(id, nouveauStatut);
+      const payload = { statut: cible };
+      // Envoyer la date de livraison si on passe à LIVRE et qu'une date est saisie
+      if (cible === 'LIVRE' && dateLivraison) {
+        payload.dateLivraison = dateLivraison;
+      }
+      const res = await bonLivraisonService.updateStatut(id, cible);
+      // Si on a aussi une date à mettre à jour, on peut l'envoyer séparément
+      // Pour l'instant on garde le retour de updateStatut
       setBl(res.data);
-      toast.success('Statut mis à jour.');
+      toast.success(`Statut mis à jour : ${STATUT_CONFIG[cible]?.label}`);
+      setStatutDialog({ open: false, cible: null });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Erreur lors du changement de statut.');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleFacturer = async () => {
+    setFacturing(true);
+    try {
+      const res = await factureService.createFromSingleBL(bl.id);
+      toast.success(`Facture ${res.data.numero} créée avec succès !`);
+      const updated = await bonLivraisonService.getById(bl.id);
+      setBl(updated.data);
+      setFactureDialog(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Erreur lors de la création de la facture.');
+    } finally {
+      setFacturing(false);
     }
   };
 
@@ -80,6 +122,8 @@ const BonLivraisonDetail = () => {
 
   return (
     <div style={{ maxWidth: 900 }}>
+
+      {/* Header */}
       <div className="page-header">
         <div>
           <h1 className="page-title">🚚 {bl.numero}</h1>
@@ -87,7 +131,9 @@ const BonLivraisonDetail = () => {
             display: 'inline-block', marginTop: 4, padding: '3px 10px',
             borderRadius: 20, fontSize: '0.8rem', fontWeight: 700,
             color: statut.color, background: statut.bg,
-          }}>{statut.label}</span>
+          }}>
+            {statut.label}
+          </span>
           {bl.factureNumero && (
             <Link to={`/factures/${bl.factureId}`} style={{ marginLeft: 10, fontSize: '0.8rem', color: '#7c3aed' }}>
               🧾 Facture : {bl.factureNumero}
@@ -95,32 +141,66 @@ const BonLivraisonDetail = () => {
           )}
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {canUpdate && nextStatuts.map(s => (
+          {canFacture && bl.statut === 'LIVRE' && !bl.factureId && (
             <button
-              key={s}
-              className="btn btn-secondary"
-              onClick={() => handleStatutChange(s)}
-              disabled={updating}
-              style={{
-                color: STATUT_CONFIG[s]?.color,
-                borderColor: STATUT_CONFIG[s]?.color,
-              }}
+              className="btn btn-primary"
+              onClick={() => setFactureDialog(true)}
+              style={{ background: '#7c3aed', borderColor: '#7c3aed' }}
             >
-              {STATUT_CONFIG[s]?.label}
+              🧾 Facturer ce BL
             </button>
-          ))}
+          )}
+          {bl.factureId && (
+            <Link
+              to={`/factures/${bl.factureId}`}
+              className="btn btn-secondary"
+              style={{ color: '#7c3aed', borderColor: '#7c3aed' }}
+            >
+              🧾 {bl.factureNumero}
+            </Link>
+          )}
           <button
             className="btn btn-secondary"
             onClick={handleDownloadPdf}
             disabled={downloading}
             style={{ color: '#4f46e5', borderColor: '#4f46e5' }}
           >
-            {downloading ? 'Génération...' : '📄 Télécharger PDF'}
+            {downloading ? 'Génération...' : '📄 PDF'}
           </button>
           <Link to="/bons-livraison" className="btn btn-secondary">← Retour</Link>
         </div>
       </div>
 
+      {/* Bloc changement de statut */}
+      {nextStatuts.length > 0 && (
+        <div className="card" style={{ marginBottom: '1.5rem', padding: '1rem 1.5rem' }}>
+          <p style={{ margin: '0 0 0.75rem', fontWeight: 600, fontSize: '0.9rem', color: '#475569' }}>
+            Changer le statut
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {nextStatuts.map(s => {
+              const cfg = STATUT_CONFIG[s];
+              return (
+                <button
+                  key={s}
+                  className="btn btn-secondary"
+                  onClick={() => openStatutDialog(s)}
+                  style={{
+                    color: cfg.color,
+                    borderColor: cfg.color,
+                    fontWeight: 600,
+                    padding: '0.4rem 1rem',
+                  }}
+                >
+                  → {cfg.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Infos générales */}
       <div className="card" style={{ marginBottom: '1.5rem' }}>
         <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>Informations</h3>
         <div className="form-grid">
@@ -158,6 +238,7 @@ const BonLivraisonDetail = () => {
         </div>
       </div>
 
+      {/* Lignes */}
       <div className="card" style={{ marginBottom: '1.5rem', padding: 0, overflow: 'hidden' }}>
         <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e2e8f0' }}>
           <h3 style={{ margin: 0 }}>Articles livrés</h3>
@@ -186,7 +267,6 @@ const BonLivraisonDetail = () => {
             ))}
           </tbody>
         </table>
-
         <div style={{ padding: '1rem 1.5rem', background: '#f8fafc', borderTop: '2px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
           <div style={{ textAlign: 'right', minWidth: 260 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginBottom: '0.3rem', fontSize: '0.875rem', color: '#64748b' }}>
@@ -201,6 +281,93 @@ const BonLivraisonDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Dialog : confirmation changement de statut */}
+      <Dialog
+        open={statutDialog.open}
+        onClose={() => !updating && setStatutDialog({ open: false, cible: null })}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Changer le statut</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>
+            Passer le BL <strong>{bl.numero}</strong> au statut{' '}
+            <strong style={{ color: STATUT_CONFIG[statutDialog.cible]?.color }}>
+              {STATUT_CONFIG[statutDialog.cible]?.label}
+            </strong> ?
+          </Typography>
+
+          {statutDialog.cible === 'LIVRE' && (
+            <TextField
+              label="Date de livraison effective"
+              type="date"
+              fullWidth
+              size="small"
+              value={dateLivraison}
+              onChange={(e) => setDateLivraison(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              helperText="Optionnel — laissez vide si non connue"
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setStatutDialog({ open: false, cible: null })}
+            color="inherit"
+            disabled={updating}
+          >
+            Annuler
+          </Button>
+          <Button
+            onClick={handleStatutChange}
+            variant="contained"
+            disabled={updating}
+            sx={{
+              bgcolor: STATUT_CONFIG[statutDialog.cible]?.color,
+              '&:hover': { filter: 'brightness(0.9)' },
+            }}
+          >
+            {updating
+              ? <CircularProgress size={18} sx={{ color: 'white' }} />
+              : `Confirmer → ${STATUT_CONFIG[statutDialog.cible]?.label}`}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog : confirmation facturation */}
+      <Dialog
+        open={factureDialog}
+        onClose={() => !facturing && setFactureDialog(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Créer une facture</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Créer une facture pour le bon de livraison <strong>{bl.numero}</strong> ?
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#64748b', mt: 1 }}>
+            Client : {bl.client?.nom}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFactureDialog(false)} color="inherit" disabled={facturing}>
+            Annuler
+          </Button>
+          <Button
+            onClick={handleFacturer}
+            variant="contained"
+            disabled={facturing}
+            sx={{ bgcolor: '#7c3aed', '&:hover': { bgcolor: '#6d28d9' } }}
+          >
+            {facturing
+              ? <CircularProgress size={18} sx={{ color: 'white' }} />
+              : '🧾 Créer la facture'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
     </div>
   );
 };

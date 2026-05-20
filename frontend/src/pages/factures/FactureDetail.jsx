@@ -1,48 +1,74 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { factureService } from '../../services/factureService';
 import toast from 'react-hot-toast';
+import {
+  Dialog, DialogTitle, DialogContent, DialogActions,
+  Button, Typography, CircularProgress, TextField, MenuItem,
+} from '@mui/material';
+
+const STATUT_CONFIG = {
+  BROUILLON: { label: 'Brouillon', color: '#64748b', bg: '#f1f5f9' },
+  ENVOYEE:   { label: 'Envoyée',   color: '#1d4ed8', bg: '#dbeafe' },
+  PAYEE:     { label: 'Payée',     color: '#15803d', bg: '#dcfce7' },
+  ANNULEE:   { label: 'Annulée',   color: '#b91c1c', bg: '#fee2e2' },
+};
 
 const TRANSITIONS = {
-  BROUILLON: [{ value: 'ENVOYEE', label: '📤 Marquer Envoyée', cls: 'btn-primary' }, { value: 'ANNULEE', label: '❌ Annuler', cls: 'btn-danger' }],
-  ENVOYEE:   [{ value: 'PAYEE', label: '✅ Marquer Payée', cls: 'btn-success' }, { value: 'ANNULEE', label: '❌ Annuler', cls: 'btn-danger' }],
+  BROUILLON: ['ENVOYEE', 'ANNULEE'],
+  ENVOYEE:   ['PAYEE', 'ANNULEE'],
   PAYEE:     [],
   ANNULEE:   [],
 };
 
+const TRANSITION_LABELS = {
+  ENVOYEE: '📤 Marquer Envoyée',
+  PAYEE:   '✅ Marquer Payée',
+  ANNULEE: '❌ Annuler la facture',
+};
+
+const fmt = (n) => Number(n || 0).toLocaleString('fr-TN', { minimumFractionDigits: 3 });
+
 const FactureDetail = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [facture, setFacture] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [updatingStatut, setUpdatingStatut] = useState(false);
-  const [validationErrors, setValidationErrors] = useState(null);
+  const [updating, setUpdating] = useState(false);
   const [validating, setValidating] = useState(false);
+  const [validationErrors, setValidationErrors] = useState(null);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const [statutDialog, setStatutDialog] = useState({ open: false, cible: null });
+  const [paymentMethod, setPaymentMethod] = useState('VIREMENT');
 
   useEffect(() => {
     factureService.getById(id)
-      .then(res => { setFacture(res.data); setLoading(false); })
-      .catch(() => { setError('Facture introuvable.'); setLoading(false); });
+      .then(res => setFacture(res.data))
+      .catch(() => toast.error('Impossible de charger la facture.'))
+      .finally(() => setLoading(false));
   }, [id]);
 
-  const handleStatut = async (statut) => {
-    let pm = null;
-    if (statut === 'PAYEE') {
-      const p = window.prompt("Quel est le mode de paiement ? (ESPECES, VIREMENT, CHEQUE)", "VIREMENT");
-      if (!p) return;
-      pm = p.toUpperCase();
-    } else {
-      if (!window.confirm(`Changer le statut en "${statut}" ?`)) return;
-    }
-    setUpdatingStatut(true);
+  const openStatutDialog = (cible) => {
+    setPaymentMethod('VIREMENT');
+    setStatutDialog({ open: true, cible });
+  };
+
+  const handleStatutChange = async () => {
+    const { cible } = statutDialog;
+    setUpdating(true);
     try {
-      const res = await factureService.updateStatut(id, { statut, paymentMethod: pm });
+      const payload = { statut: cible };
+      if (cible === 'PAYEE') payload.paymentMethod = paymentMethod;
+      const res = await factureService.updateStatut(id, payload);
       setFacture(res.data);
+      toast.success(`Statut mis à jour : ${STATUT_CONFIG[cible]?.label}`);
+      setStatutDialog({ open: false, cible: null });
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur.');
-    } finally { setUpdatingStatut(false); }
+      toast.error(err.response?.data?.message || 'Erreur lors du changement de statut.');
+    } finally {
+      setUpdating(false);
+    }
   };
 
   const handleValiderIA = async () => {
@@ -50,20 +76,20 @@ const FactureDetail = () => {
     setValidationErrors(null);
     try {
       const res = await factureService.validerIA(id);
-      setValidationErrors(res.data); // tableau (vide = OK)
+      setValidationErrors(res.data);
     } catch {
-      setError('Erreur lors de la validation IA.');
+      toast.error('Erreur lors de la validation IA.');
     } finally {
       setValidating(false);
     }
   };
 
   const handleDownload = async (type) => {
+    setDownloading(true);
     try {
-      const response = type === 'pdf' 
+      const response = type === 'pdf'
         ? await factureService.downloadPdf(id)
         : await factureService.exportXml(id);
-      
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -71,87 +97,112 @@ const FactureDetail = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
-    } catch (err) {
-      setError(`Erreur lors du téléchargement du ${type.toUpperCase()}.`);
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error(`Erreur lors du téléchargement du ${type.toUpperCase()}.`);
+    } finally {
+      setDownloading(false);
     }
   };
 
   const handleSendEmail = async () => {
     if (!window.confirm(`Envoyer la facture ${facture.numero} par email à ${facture.client?.email || 'le client'} ?`)) return;
     setIsSendingEmail(true);
-    const toastId = toast.loading('⏳ Envoi de l\'email en cours...');
+    const toastId = toast.loading("Envoi de l'email en cours...");
     try {
       const res = await factureService.envoyerParEmail(id);
       toast.success(res.data?.message || 'Email envoyé avec succès !', { id: toastId, duration: 5000 });
     } catch (err) {
-      const msg = err.response?.data?.message || 'Erreur lors de l\'envoi de l\'email.';
-      toast.error(msg, { id: toastId, duration: 6000 });
+      toast.error(err.response?.data?.message || "Erreur lors de l'envoi.", { id: toastId, duration: 6000 });
     } finally {
       setIsSendingEmail(false);
     }
   };
 
-  const statutBadge = (s) => {
-    const map = { BROUILLON: 'brouillon', ENVOYEE: 'envoyee', PAYEE: 'payee', ANNULEE: 'annulee' };
-    return <span className={`badge badge-${map[s] || ''}`} style={{ fontSize: '0.875rem', padding: '0.3rem 0.8rem' }}>{s}</span>;
-  };
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Chargement...</div>;
+  if (!facture) return <div style={{ padding: '2rem' }}>Facture introuvable.</div>;
 
-  if (loading) return <div className="loading">Chargement...</div>;
-  if (error && !facture) return <div className="alert alert-danger">{error}</div>;
-
-  const transitions = TRANSITIONS[facture.statut] || [];
+  const statut = STATUT_CONFIG[facture.statut] || { label: facture.statut, color: '#64748b', bg: '#f1f5f9' };
+  const nextStatuts = TRANSITIONS[facture.statut] || [];
 
   return (
-    <div style={{ maxWidth: 860 }}>
-      {/* En-tête */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.75rem' }}>
+    <div style={{ maxWidth: 900 }}>
+
+      {/* Header */}
+      <div className="page-header">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.25rem' }}>
-            <h1 className="page-title" style={{ marginBottom: 0 }}>Facture {facture.numero}</h1>
-            {statutBadge(facture.statut)}
-          </div>
-          <p className="page-subtitle">Créée le {facture.dateEmission ? new Date(facture.dateEmission).toLocaleDateString('fr-FR') : '—'}</p>
+          <h1 className="page-title">🧾 {facture.numero}</h1>
+          <span style={{
+            display: 'inline-block', marginTop: 4, padding: '3px 10px',
+            borderRadius: 20, fontSize: '0.8rem', fontWeight: 700,
+            color: statut.color, background: statut.bg,
+          }}>
+            {statut.label}
+          </span>
+          {facture.commandeReference && (
+            <Link to={`/commandes/${facture.commandeId}`} style={{ marginLeft: 10, fontSize: '0.8rem', color: '#6366f1' }}>
+              📦 Commande : {facture.commandeReference}
+            </Link>
+          )}
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <Link to="/factures" className="btn btn-secondary">← Retour</Link>
-          <button onClick={() => handleDownload('pdf')} className="btn btn-secondary" style={{ background: '#f8fafc', color: '#1e293b', border: '1px solid #cbd5e1' }}>
-            📄 Télécharger PDF
+          {nextStatuts.map(s => (
+            <button
+              key={s}
+              className="btn btn-secondary"
+              onClick={() => openStatutDialog(s)}
+              style={{ color: STATUT_CONFIG[s]?.color, borderColor: STATUT_CONFIG[s]?.color, fontWeight: 600 }}
+            >
+              {TRANSITION_LABELS[s]}
+            </button>
+          ))}
+          <button
+            className="btn btn-secondary"
+            onClick={() => handleDownload('pdf')}
+            disabled={downloading}
+            style={{ color: '#4f46e5', borderColor: '#4f46e5' }}
+          >
+            {downloading ? 'Génération...' : '📄 PDF'}
           </button>
-          <button onClick={() => handleDownload('xml')} className="btn btn-secondary" style={{ background: '#f8fafc', color: '#1e293b', border: '1px solid #cbd5e1' }}>
-            📥 Exporter XML
+          <button
+            className="btn btn-secondary"
+            onClick={() => handleDownload('xml')}
+            style={{ color: '#0ea5e9', borderColor: '#0ea5e9' }}
+          >
+            📥 XML
           </button>
           <button
             onClick={handleSendEmail}
             disabled={isSendingEmail || !facture.client?.email}
-            title={!facture.client?.email ? 'Ce client n\'a pas d\'adresse email' : ''}
             className="btn btn-secondary"
+            title={!facture.client?.email ? "Ce client n'a pas d'adresse email" : ''}
             style={{
-              background: isSendingEmail ? '#f8fafc' : 'linear-gradient(135deg, #0ea5e9, #6366f1)',
-              color: isSendingEmail ? '#94a3b8' : '#fff',
-              border: 'none',
+              background: isSendingEmail ? undefined : 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+              color: isSendingEmail ? undefined : '#fff',
+              borderColor: 'transparent',
               opacity: !facture.client?.email ? 0.5 : 1,
               cursor: !facture.client?.email ? 'not-allowed' : 'pointer',
             }}
           >
-            {isSendingEmail ? '⏳ Envoi...' : '✉️ Envoyer par email'}
+            {isSendingEmail ? '⏳ Envoi...' : '✉️ Email'}
           </button>
-          <button onClick={handleValiderIA} disabled={validating}
+          <button
+            onClick={handleValiderIA}
+            disabled={validating}
             className="btn btn-secondary"
-            style={{ background: validating ? '#f8fafc' : 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: validating ? '#94a3b8' : '#fff', border: 'none' }}>
+            style={{
+              background: validating ? undefined : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              color: validating ? undefined : '#fff',
+              borderColor: 'transparent',
+            }}
+          >
             {validating ? '⏳ Validation...' : '🤖 Valider (IA)'}
           </button>
-          {transitions.map(t => (
-            <button key={t.value} onClick={() => handleStatut(t.value)}
-              className={`btn ${t.cls}`} disabled={updatingStatut}>
-              {t.label}
-            </button>
-          ))}
+          <Link to="/factures" className="btn btn-secondary">← Retour</Link>
         </div>
       </div>
 
-      {error && <div className="alert alert-danger">{error}</div>}
-
-      {/* Résultats de la validation IA */}
+      {/* Résultats validation IA */}
       {validationErrors !== null && (
         <div style={{
           marginBottom: '1.25rem', padding: '1rem 1.25rem',
@@ -161,8 +212,7 @@ const FactureDetail = () => {
         }}>
           {validationErrors.length === 0 ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#15803d', fontWeight: 600 }}>
-              <span>✅</span>
-              <span>Facture valide — aucune erreur détectée par l'assistant IA.</span>
+              <span>✅ Facture valide — aucune erreur détectée par l'assistant IA.</span>
             </div>
           ) : (
             <>
@@ -181,73 +231,146 @@ const FactureDetail = () => {
         </div>
       )}
 
-      {/* Client + Infos */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
-        <div className="card">
-          <h3 style={{ marginTop: 0, marginBottom: '0.75rem', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#94a3b8' }}>Client</h3>
-          <p style={{ margin: '0 0 0.25rem', fontWeight: 700, fontSize: '1rem', color: '#1e293b' }}>{facture.client?.nom}</p>
-          {facture.client?.email && <p style={{ margin: '0 0 0.25rem', color: '#64748b', fontSize: '0.875rem' }}>✉️ {facture.client.email}</p>}
-          {facture.client?.telephone && <p style={{ margin: '0 0 0.25rem', color: '#64748b', fontSize: '0.875rem' }}>📞 {facture.client.telephone}</p>}
-          {facture.client?.adresse && <p style={{ margin: 0, color: '#64748b', fontSize: '0.875rem' }}>📍 {facture.client.adresse}, {facture.client.ville}</p>}
-        </div>
-        <div className="card">
-          <h3 style={{ marginTop: 0, marginBottom: '0.75rem', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#94a3b8' }}>Détails</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.875rem', color: '#64748b' }}>
-            <div><strong style={{ color: '#374151' }}>Date d'échéance :</strong> {facture.dateEcheance || '—'}</div>
-            <div><strong style={{ color: '#374151' }}>Mode de paiement :</strong> {facture.paymentMethod || '—'}</div>
-            <div><strong style={{ color: '#374151' }}>Créée par :</strong> {facture.createdByEmail || '—'}</div>
-            {facture.notes && <div style={{ marginTop: '0.5rem', padding: '0.5rem', background: '#f8fafc', borderRadius: 6, color: '#475569' }}>💬 {facture.notes}</div>}
+      {/* Infos générales */}
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>Informations</h3>
+        <div className="form-grid">
+          <div>
+            <label style={{ fontWeight: 600, color: '#64748b', fontSize: '0.8rem' }}>CLIENT</label>
+            <p style={{ margin: '4px 0', fontWeight: 600 }}>{facture.client?.nom}</p>
+            {facture.client?.email && <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>✉️ {facture.client.email}</p>}
+            {facture.client?.telephone && <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>📞 {facture.client.telephone}</p>}
           </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#64748b', fontSize: '0.8rem' }}>DATE D'ÉMISSION</label>
+            <p style={{ margin: '4px 0' }}>{facture.dateEmission ? new Date(facture.dateEmission).toLocaleDateString('fr-FR') : '—'}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#64748b', fontSize: '0.8rem' }}>DATE D'ÉCHÉANCE</label>
+            <p style={{ margin: '4px 0' }}>{facture.dateEcheance ? new Date(facture.dateEcheance).toLocaleDateString('fr-FR') : '—'}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#64748b', fontSize: '0.8rem' }}>MODE DE PAIEMENT</label>
+            <p style={{ margin: '4px 0' }}>
+              {facture.paymentMethod === 'ESPECES' ? 'Espèces' :
+               facture.paymentMethod === 'VIREMENT' ? 'Virement bancaire' :
+               facture.paymentMethod === 'CHEQUE' ? 'Chèque' :
+               facture.paymentMethod || '—'}
+            </p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#64748b', fontSize: '0.8rem' }}>CRÉÉE PAR</label>
+            <p style={{ margin: '4px 0' }}>{facture.createdByEmail || '—'}</p>
+          </div>
+          {facture.notes && (
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ fontWeight: 600, color: '#64748b', fontSize: '0.8rem' }}>NOTES</label>
+              <p style={{ margin: '4px 0', padding: '0.75rem', background: '#f8fafc', borderRadius: 8, fontSize: '0.9rem' }}>
+                {facture.notes}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Lignes de la facture */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: '1.5rem' }}>
+      {/* Lignes */}
+      <div className="card" style={{ marginBottom: '1.5rem', padding: 0, overflow: 'hidden' }}>
         <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e2e8f0' }}>
-          <h3 style={{ margin: 0, color: '#1e293b' }}>Détail des prestations</h3>
+          <h3 style={{ margin: 0 }}>Détail des prestations</h3>
         </div>
         <table className="data-table">
           <thead>
             <tr>
               <th>Désignation</th>
-              <th style={{ width: 60, textAlign: 'center' }}>Qté</th>
-              <th style={{ width: 120, textAlign: 'right' }}>Prix HT</th>
-              <th style={{ width: 70, textAlign: 'center' }}>TVA</th>
-              <th style={{ width: 120, textAlign: 'right' }}>Montant HT</th>
-              <th style={{ width: 120, textAlign: 'right' }}>Montant TTC</th>
+              <th style={{ width: 70 }}>Qté</th>
+              <th style={{ width: 120 }}>PU HT</th>
+              <th style={{ width: 80 }}>TVA %</th>
+              <th style={{ width: 110 }}>Mont. HT</th>
+              <th style={{ width: 110 }}>Mont. TTC</th>
             </tr>
           </thead>
           <tbody>
-            {facture.lignes?.map(l => (
-              <tr key={l.id}>
+            {facture.lignes?.map((l, i) => (
+              <tr key={l.id || i}>
                 <td><strong>{l.designation}</strong></td>
-                <td style={{ textAlign: 'center' }}>{l.quantite}</td>
-                <td style={{ textAlign: 'right' }}>{Number(l.prixUnitaireHT).toFixed(2)}</td>
-                <td style={{ textAlign: 'center' }}>{l.tauxTva}%</td>
-                <td style={{ textAlign: 'right' }}>{Number(l.montantHT).toFixed(2)}</td>
-                <td style={{ textAlign: 'right' }}><strong>{Number(l.montantTTC).toFixed(2)}</strong></td>
+                <td>{l.quantite}</td>
+                <td>{fmt(l.prixUnitaireHT)} TND</td>
+                <td>{l.tauxTva}%</td>
+                <td>{fmt(l.montantHT)} TND</td>
+                <td><strong>{fmt(l.montantTTC)} TND</strong></td>
               </tr>
             ))}
           </tbody>
         </table>
-
-        {/* Totaux */}
         <div style={{ padding: '1rem 1.5rem', background: '#f8fafc', borderTop: '2px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
-          <div style={{ minWidth: 240 }}>
-            {[
-              { label: 'Total HT', value: facture.totalHT },
-              { label: 'Total TVA', value: facture.totalTva },
-            ].map(({ label, value }) => (
-              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem', fontSize: '0.875rem', color: '#64748b' }}>
-                <span>{label} :</span><span>{Number(value || 0).toFixed(2)} TND</span>
-              </div>
-            ))}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.15rem', fontWeight: 800, color: '#1e293b', borderTop: '2px solid #e2e8f0', paddingTop: '0.6rem', marginTop: '0.6rem' }}>
-              <span>Total TTC :</span><span style={{ color: '#6366f1' }}>{Number(facture.totalTTC || 0).toFixed(2)} TND</span>
+          <div style={{ textAlign: 'right', minWidth: 260 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginBottom: '0.3rem', fontSize: '0.875rem', color: '#64748b' }}>
+              <span>Total HT :</span><span>{fmt(facture.totalHT)} TND</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginBottom: '0.3rem', fontSize: '0.875rem', color: '#64748b' }}>
+              <span>Total TVA :</span><span>{fmt(facture.totalTva)} TND</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', fontSize: '1.2rem', fontWeight: 700, color: '#1e293b', borderTop: '2px solid #e2e8f0', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
+              <span>Total TTC :</span><span style={{ color: '#4f46e5' }}>{fmt(facture.totalTTC)} TND</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Dialog changement de statut */}
+      <Dialog
+        open={statutDialog.open}
+        onClose={() => !updating && setStatutDialog({ open: false, cible: null })}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Changer le statut</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>
+            Passer la facture <strong>{facture.numero}</strong> au statut{' '}
+            <strong style={{ color: STATUT_CONFIG[statutDialog.cible]?.color }}>
+              {STATUT_CONFIG[statutDialog.cible]?.label}
+            </strong> ?
+          </Typography>
+          {statutDialog.cible === 'PAYEE' && (
+            <TextField
+              select
+              label="Mode de paiement"
+              fullWidth
+              size="small"
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+            >
+              <MenuItem value="ESPECES">Espèces</MenuItem>
+              <MenuItem value="VIREMENT">Virement bancaire</MenuItem>
+              <MenuItem value="CHEQUE">Chèque</MenuItem>
+            </TextField>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setStatutDialog({ open: false, cible: null })}
+            color="inherit"
+            disabled={updating}
+          >
+            Annuler
+          </Button>
+          <Button
+            onClick={handleStatutChange}
+            variant="contained"
+            disabled={updating}
+            sx={{
+              bgcolor: STATUT_CONFIG[statutDialog.cible]?.color,
+              '&:hover': { filter: 'brightness(0.9)' },
+            }}
+          >
+            {updating
+              ? <CircularProgress size={18} sx={{ color: 'white' }} />
+              : `Confirmer → ${STATUT_CONFIG[statutDialog.cible]?.label}`}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
     </div>
   );
 };

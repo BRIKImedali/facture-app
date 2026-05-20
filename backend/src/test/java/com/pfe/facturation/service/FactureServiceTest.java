@@ -6,6 +6,7 @@ import com.pfe.facturation.entity.*;
 import com.pfe.facturation.exception.ResourceNotFoundException;
 import com.pfe.facturation.repository.BonLivraisonRepository;
 import com.pfe.facturation.repository.ClientRepository;
+import com.pfe.facturation.repository.CommandeRepository;
 import com.pfe.facturation.repository.FactureRepository;
 import com.pfe.facturation.repository.ProduitRepository;
 import com.pfe.facturation.security.entity.User;
@@ -37,6 +38,7 @@ class FactureServiceTest {
     @Mock private ClientRepository clientRepository;
     @Mock private ProduitRepository produitRepository;
     @Mock private BonLivraisonRepository bonLivraisonRepository;
+    @Mock private CommandeRepository commandeRepository;
     @Mock private ClientService clientService;
 
     @InjectMocks

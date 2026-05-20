@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 
 @Repository
@@ -22,6 +23,9 @@ public interface FactureRepository extends JpaRepository<Facture, Long> {
 
     /** Toutes les factures, triées par date décroissante */
     List<Facture> findAllByOrderByDateEmissionDesc();
+
+    /** Facture liée à une commande spécifique (une seule possible) */
+    Optional<Facture> findByCommandeId(Long commandeId);
 
     /** Compte les factures créées dans une année donnée — pour générer le numéro */
     @Query("SELECT COUNT(f) FROM Facture f WHERE EXTRACT(YEAR FROM f.dateEmission) = :year")

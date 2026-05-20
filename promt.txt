@@ -1,88 +1,115 @@
-# Contexte du projet
-Je travaille sur une application Spring Boot (backend REST API) + React (frontend).
-J'ai déjà un module Commerce existant avec gestion des commandes et facturation.
-Je veux étendre ce module avec deux nouvelles fonctionnalités liées.
+Dans mon app React (Vite + MUI), j'ai un tableau de lignes de commande 
+dans frontend/src/pages/commandes/CommandeCreate.jsx (et CommandeEdit.jsx, 
+DevisCreate.jsx, DevisEdit.jsx, FactureCreate.jsx qui ont la même structure).
 
----
+## Problème visuel dans le tableau des lignes :
+- La colonne QTÉ : le champ input est trop petit, la valeur n'est pas visible
+- Les colonnes REMISE %, QTÉ, TVA % : trop étroites, peu lisibles
+- Les inputs dans ces colonnes n'ont pas de style visible (pas de bordure claire)
 
-# FONCTIONNALITÉ 1 — Bons de livraison (BL)
+## Ce que je veux :
 
-## Objectif
-Ajouter un système complet de bons de livraison rattachés aux commandes existantes.
+### 1. Colonne QTÉ
+- Largeur minimale : 80px au lieu de 70px
+- Input avec bordure visible, padding correct, texte centré
+- S'assurer que la valeur s'affiche bien (le champ n'est pas écrasé)
 
-## Backend (Spring Boot)
-- Créer l'entité `BonLivraison` avec les champs :
-  - id, numéro BL (auto-généré ex: BL-2025-0001), date de création
-  - statut : BROUILLON, EN_COURS, LIVRÉ, ANNULÉ
-  - référence vers la commande source (relation ManyToOne vers Commande)
-  - référence vers le client (déduite de la commande)
-  - lignes de livraison (produit, quantité livrée)
-  - date de livraison effective, notes/commentaires
-- Créer le repository, service et controller REST pour :
-  - POST /api/bons-livraison — créer un BL depuis une commande
-  - GET /api/bons-livraison — lister tous les BL (avec filtres client, statut, date)
-  - GET /api/bons-livraison/{id} — détail d'un BL
-  - PUT /api/bons-livraison/{id}/statut — changer le statut
-  - GET /api/bons-livraison/{id}/pdf — générer et télécharger le PDF du BL
-- Pour le PDF, utiliser la librairie iText ou JasperReports (celle déjà présente dans le projet, sinon iText7)
-- Le PDF doit contenir : logo/entête, infos client, tableau des articles livrés, statut, date, numéro BL, signature
+### 2. Colonnes REMISE % et TVA %  
+- Largeur minimale : 100px chacune
+- Input/select avec taille de police 0.9rem minimum
+- Bordure visible et padding suffisant
 
-## Frontend (React)
-- Page liste des BL avec tableau filtrable (par client, statut, date)
-- Bouton "Créer un BL" depuis la page détail d'une commande
-- Formulaire de création : sélection des lignes de commande à inclure, quantités livrées, date, notes
-- Badge coloré pour chaque statut (BROUILLON=gris, EN_COURS=bleu, LIVRÉ=vert, ANNULÉ=rouge)
-- Bouton "Changer statut" avec menu déroulant
-- Bouton "Télécharger PDF" qui appelle l'endpoint PDF
+### 3. Style général des inputs dans le tableau
+Remplacer le style inline actuel des inputs dans le tbody par ce style :
+  width: '100%'
+  border: '1.5px solid #e2e8f0'
+  borderRadius: '6px'
+  padding: '6px 8px'
+  fontSize: '0.9rem'
+  background: '#fff'
+  textAlign: 'center' (pour QTÉ, REMISE, TVA)
+  boxSizing: 'border-box'
 
----
+### 4. Headers du tableau
+Rendre les headers PRODUIT, DÉSIGNATION, QTÉ, PRIX HT, REMISE %, TVA %, 
+TOTAL TTC plus lisibles :
+- fontSize: '0.75rem', fontWeight: 700, color: '#475569'
+- padding: '0.75rem 0.75rem'
 
-# FONCTIONNALITÉ 2 — Facturation groupée par BL
+Appliquer ces changements dans tous les fichiers concernés :
+- CommandeCreate.jsx
+- CommandeEdit.jsx  
+- DevisCreate.jsx
+- DevisEdit.jsx
+- FactureCreate.jsx (mode classique)
 
-## Objectif
-Permettre à l'utilisateur de créer une facture en sélectionnant manuellement plusieurs bons
-de livraison d'un même client. La facture consolide tous les articles des BL sélectionnés.
+ j'ai un tableau de lignes 
+dans plusieurs pages. Je veux appliquer les mêmes corrections 
+visuelles sur TOUS ces fichiers :
 
-## Backend (Spring Boot)
-- Modifier ou étendre l'entité `Facture` pour ajouter :
-  - une relation vers les BL sources (ManyToMany ou OneToMany vers BonLivraison)
-  - un champ `type` : CLASSIQUE ou GROUPEE_BL
-- Ajouter un endpoint :
-  - POST /api/factures/depuis-bons-livraison
-    Body : { clientId, bonLivraisonIds: [id1, id2, ...], dateEcheance, notes }
-    Logique : récupérer tous les BL sélectionnés, vérifier qu'ils appartiennent tous
-    au même client et sont au statut LIVRÉ, consolider les lignes (regrouper par produit
-    si même référence), calculer totaux HT/TVA/TTC, créer la facture
-- Marquer les BL utilisés comme "facturé" (ajouter champ `facture` sur BonLivraison)
-- Endpoint GET /api/bons-livraison/facturables?clientId={id} — retourne les BL
-  livrés et non encore facturés pour un client donné
+## Fichiers à modifier :
+- frontend/src/pages/commandes/CommandeCreate.jsx
+- frontend/src/pages/commandes/CommandeEdit.jsx
+- frontend/src/pages/devis/DevisCreate.jsx
+- frontend/src/pages/devis/DevisEdit.jsx
+- frontend/src/pages/factures/FactureCreate.jsx
+- frontend/src/pages/bonsLivraison/BonLivraisonCreate.jsx
 
-## Frontend (React)
-- Dans la page de création de facture, ajouter un mode "Facturer des bons de livraison"
-- Étape 1 : sélectionner le client
-- Étape 2 : afficher la liste des BL livrés et non facturés de ce client,
-  avec cases à cocher pour sélection multiple (afficher : numéro BL, date, montant, commande source)
-- Étape 3 : prévisualisation de la facture consolidée avant confirmation
-- Bouton "Générer la facture" qui appelle le backend
-- Une fois la facture créée, les BL sélectionnés doivent afficher un badge "Facturé"
-  avec un lien vers la facture générée
+## Modifications à appliquer dans CHAQUE fichier :
 
----
+### 1. Headers du tableau <thead>
+Chaque <th> doit avoir :
+  padding: '0.75rem 0.75rem'
+  fontSize: '0.75rem'
+  fontWeight: 700
+  color: '#475569'
+  textTransform: 'uppercase'
+  letterSpacing: '0.5px'
+  whiteSpace: 'nowrap'
 
-# Contraintes importantes
-- Respecter l'architecture existante du projet (packages, conventions de nommage, structure)
-- Commence par analyser la structure actuelle du module commerce avant de coder
-- Utilise les DTOs et MapStruct si déjà utilisés dans le projet
-- Gestion des erreurs : retourner des messages clairs si un BL est déjà facturé,
-  si le client ne correspond pas, etc.
-- Ajoute les migrations Flyway ou Liquibase si déjà utilisées dans le projet
+Largeurs des colonnes :
+  - Produit (optionnel) : width: '22%'
+  - Désignation : width: auto (flex)
+  - QTÉ : width: '80px'
+  - Prix HT : width: '110px'
+  - Remise % : width: '90px'
+  - TVA % : width: '90px'
+  - Total TTC : width: '110px'
+  - Supprimer (X) : width: '40px'
 
----
+### 2. Inputs dans le tbody <td>
+Tous les inputs (quantite, prixUnitaireHT, remise, tauxTva) 
+doivent avoir ce style :
+  width: '100%'
+  border: '1.5px solid #e2e8f0'
+  borderRadius: '6px'
+  padding: '6px 8px'
+  fontSize: '0.9rem'
+  background: '#fff'
+  boxSizing: 'border-box'
+  outline: 'none'
 
-# Par où commencer
-1. Analyse d'abord la structure du projet (entités existantes, packages, dépendances pom.xml)
-2. Commence par le backend : entité → repository → service → controller
-3. Ensuite le frontend : composants React page par page
-4. Génère les fichiers un par un et explique chaque choix
+Pour QTÉ, Remise %, TVA % : ajouter textAlign: 'center'
+Pour Prix HT : ajouter textAlign: 'right'
 
-Demande-moi si tu as besoin de voir un fichier existant avant de commencer.
+### 3. Select TVA dans le tbody
+Le <select> du taux TVA doit avoir :
+  width: '100%'
+  border: '1.5px solid #e2e8f0'
+  borderRadius: '6px'
+  padding: '6px 4px'
+  fontSize: '0.88rem'
+  background: '#fff'
+  cursor: 'pointer'
+
+### 4. Colonne QTÉ
+S'assurer que le champ quantité est bien visible :
+- Retirer tout style qui écrase la largeur
+- min-width: 60px sur le <td>
+- Input avec textAlign: 'center'
+
+### 5. IMPORTANT
+- Ne pas toucher à la logique métier (calculs, handlers)
+- Ne pas toucher aux totaux en bas du tableau
+- Ne pas toucher au SearchableSelect du produit
+- Seulement les styles visuels des inputs/headers

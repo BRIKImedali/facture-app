@@ -3,55 +3,65 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import ChatAssistant from './ChatAssistant';
 import './Layout.css';
+import {
+  Activity,
+  BookUser,
+  Store,
+  Layers,
+  SlidersHorizontal,
+  Zap,
+  Crown,
+  KeyRound,
+  CircleUser,
+  LogOut,
+} from 'lucide-react';
 
 // ─── Menu item definitions ───────────────────────────────────────────────────
-// permission: null  → always visible to everyone
-// permission: 'X'   → visible only when user.permissions includes 'X'
-//                     (SUPER_ADMIN bypasses all permission checks)
 const ALL_NAV_ITEMS = [
-  { key: 'dashboard', to: '/dashboard', icon: '📊', label: 'Tableau de bord', permission: null, end: true },
+  { key: 'dashboard', to: '/dashboard', icon: <Activity size={18} />, label: 'Tableau de bord', permission: null, end: true },
 ];
 
-// ─── Accordion definition for "Contacts" (Clients, Vendeurs, Catégories) ─────
+// ─── Accordion definition for "Contacts" ─────────────────────────────────────
 const CONTACTS_ACCORDION = {
   key: 'contacts',
-  icon: '👥',
+  icon: <BookUser size={18} />,
   label: 'Contacts',
   permission: 'CLIENTS',
   children: [
-    { key: 'clients', to: '/clients', label: 'Clients', end: true },
-    { key: 'vendeurs', to: '/vendeurs', label: 'Vendeurs', end: true },
-    { key: 'categories', to: '/categories-clients', label: 'Catégories', end: true },
-    { key: 'devises', to: '/devises', label: 'Devises', end: true },
+    { key: 'clients',     to: '/clients',            label: 'Clients',     end: true },
+    { key: 'vendeurs',    to: '/vendeurs',            label: 'Vendeurs',    end: true },
+    { key: 'categories',  to: '/categories-clients',  label: 'Catégories',  end: true },
+    { key: 'devises',     to: '/devises',             label: 'Devises',     end: true },
   ],
 };
 
 // ─── Accordion definition for "Commerce" ─────────────────────────────────────
 const COMMERCE_ACCORDION = {
   key: 'commerce',
-  icon: '💼',
+  icon: <Store size={18} />,
   label: 'Commerce',
   permission: 'FACTURES',
   children: [
-    { key: 'devis', to: '/devis', label: 'Devis', end: true },
-    { key: 'commandes', to: '/commandes', label: 'Commandes', end: true },
-    { key: 'bons-livraison', to: '/bons-livraison', label: 'Bons de livraison', end: true },
-    { key: 'factures', to: '/factures', label: 'Factures', end: true },
+    { key: 'devis',           to: '/devis',          label: 'Devis',               end: true },
+    { key: 'commandes',       to: '/commandes',      label: 'Commandes',           end: true },
+    { key: 'bons-livraison',  to: '/bons-livraison', label: 'Bons de livraison',   end: true },
+    { key: 'factures',        to: '/factures',       label: 'Factures',            end: true },
+    { key: 'taux-tva',        to: '/taux-tva',       label: 'TVA',                 end: true },
   ],
 };
 
 // ─── Accordion definition for "Produits" ─────────────────────────────────────
 const PRODUITS_ACCORDION = {
   key: 'produits',
-  icon: '📦',
+  icon: <Layers size={18} />,
   label: 'Produits',
   permission: 'PRODUITS',
   children: [
-    { key: 'produits-cat', to: '/produits', label: 'Catalogue produits', end: true },
-    { key: 'stock', to: '/stock', label: 'Stock', end: true },
-    { key: 'emplacement', to: '/emplacement', label: 'Emplacement', end: true },
-    { key: 'site', to: '/site', label: 'Site', end: true },
-    { key: 'unite', to: '/unites', label: 'Unités', end: true },
+    { key: 'produits-cat', to: '/produits',     label: 'Catalogue produits', end: true },
+    { key: 'stock',        to: '/stock',        label: 'Stock',              end: true },
+    { key: 'emplacement',  to: '/emplacement',  label: 'Emplacement',        end: true },
+    { key: 'site',         to: '/site',         label: 'Site',               end: true },
+    { key: 'unite',        to: '/unites',       label: 'Unités',             end: true },
   ],
 };
 
@@ -132,7 +142,6 @@ const Layout = () => {
 
   const closeSidebar = () => setSidebarOpen(false);
 
-  // ─── RBAC filtering ────────────────────────────────────────────────────────
   const isPrivileged = useMemo(() => {
     if (!user) return false;
     return user.role === 'SUPER_ADMIN' || user.role === 'ADMIN';
@@ -149,7 +158,6 @@ const Layout = () => {
     if (!user) return false;
     if (isPrivileged) return true;
     const userPerms = Array.isArray(user.permissions) ? user.permissions : [];
-    // Assume if the user has CLIENTS permission, they can see the Contacts accordion
     return userPerms.includes('CLIENTS');
   }, [user, isPrivileged]);
 
@@ -157,7 +165,6 @@ const Layout = () => {
     if (!user) return false;
     if (isPrivileged) return true;
     const userPerms = Array.isArray(user.permissions) ? user.permissions : [];
-    // Assume if the user has FACTURES permission, they can see the Commerce accordion
     return userPerms.includes('FACTURES');
   }, [user, isPrivileged]);
 
@@ -171,16 +178,14 @@ const Layout = () => {
     });
   }, [user, isPrivileged]);
 
-  // ─── Role label helper ─────────────────────────────────────────────────────
   const roleLabel = () => {
     switch (user?.role) {
-      case 'SUPER_ADMIN': return '👑 Super Admin';
-      case 'ADMIN': return '🔑 Administrateur';
-      default: return '👤 Utilisateur';
+      case 'SUPER_ADMIN': return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Crown size={12} /> Super Admin</span>;
+      case 'ADMIN':       return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><KeyRound size={12} /> Administrateur</span>;
+      default:            return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CircleUser size={12} /> Utilisateur</span>;
     }
   };
 
-  // User initials for avatar
   const initials = user?.username
     ? user.username.slice(0, 2).toUpperCase()
     : `${user?.nom?.[0] ?? ''}${user?.prenom?.[0] ?? ''}`;
@@ -193,7 +198,7 @@ const Layout = () => {
       {/* ===== BARRE LATÉRALE ===== */}
       <aside className={`sidebar ${sidebarOpen ? 'sidebar--open' : ''}`}>
         <div className="sidebar-brand">
-          <span className="brand-icon">⚡</span>
+          <span className="brand-icon"><Zap size={20} /></span>
           <span className="brand-name">FacturaPro</span>
         </div>
 
@@ -214,48 +219,22 @@ const Layout = () => {
               </NavLink>
             ))}
 
-          {/* ── Contacts — accordion multi-niveaux ── */}
+          {/* ── Contacts ── */}
           {showContacts && (
-            <AccordionGroup
-              group={CONTACTS_ACCORDION}
-              depth={1}
-              closeSidebar={closeSidebar}
-            />
+            <AccordionGroup group={CONTACTS_ACCORDION} depth={1} closeSidebar={closeSidebar} />
           )}
 
-          {/* ── Produits — accordion multi-niveaux ── */}
+          {/* ── Produits ── */}
           {showProduits && (
-            <AccordionGroup
-              group={PRODUITS_ACCORDION}
-              depth={1}
-              closeSidebar={closeSidebar}
-            />
+            <AccordionGroup group={PRODUITS_ACCORDION} depth={1} closeSidebar={closeSidebar} />
           )}
 
-          {/* ── TVA — lien direct au-dessus de Commerce ── */}
+          {/* ── Commerce ── */}
           {showCommerce && (
-            <NavLink
-              to="/taux-tva"
-              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-              onClick={closeSidebar}
-            >
-              <span className="nav-icon">%</span>
-              <span>% TVA</span>
-            </NavLink>
+            <AccordionGroup group={COMMERCE_ACCORDION} depth={1} closeSidebar={closeSidebar} />
           )}
 
-          {/* ── Commerce — accordion multi-niveaux ── */}
-          {showCommerce && (
-            <AccordionGroup
-              group={COMMERCE_ACCORDION}
-              depth={1}
-              closeSidebar={closeSidebar}
-            />
-          )}
-
-
-
-          {/* ── Admin panel (ADMIN / SUPER_ADMIN only) ── */}
+          {/* ── Administration (ADMIN / SUPER_ADMIN uniquement) ── */}
           {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
             <NavLink
               to="/admin"
@@ -263,7 +242,7 @@ const Layout = () => {
               onClick={closeSidebar}
               style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}
             >
-              <span className="nav-icon">⚙️</span>
+              <span className="nav-icon"><SlidersHorizontal size={18} /></span>
               <span style={{ color: '#667eea', fontWeight: 'bold' }}>Administration</span>
             </NavLink>
           )}
@@ -279,21 +258,23 @@ const Layout = () => {
             </div>
           </div>
           <button className="btn-logout" onClick={handleLogout}>
-            🚪 Déconnexion
+            <LogOut size={14} style={{ marginRight: 6 }} />
+            Déconnexion
           </button>
         </div>
       </aside>
 
       {/* ===== CONTENU PRINCIPAL ===== */}
       <main className="main-content">
-        {/* Barre de navigation mobile (visible uniquement sur small screens) */}
         <div className="mobile-topbar">
           <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)} aria-label="Ouvrir le menu">
             <span />
             <span />
             <span />
           </button>
-          <span style={{ fontWeight: 700, fontSize: '1.1rem', color: '#1e293b' }}>⚡ FacturaPro</span>
+          <span style={{ fontWeight: 700, fontSize: '1.1rem', color: '#1e293b', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Zap size={18} color="#4f46e5" /> FacturaPro
+          </span>
         </div>
         <Outlet />
       </main>

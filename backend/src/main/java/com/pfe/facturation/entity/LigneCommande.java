@@ -39,6 +39,10 @@ public class LigneCommande {
     @Column(nullable = false)
     private Double tauxTva;
 
+    /** Remise par ligne en % (0–100). Null = pas de remise sur cette ligne. */
+    @Column(name = "remise_ligne", precision = 5, scale = 2)
+    private BigDecimal remiseLigne;
+
     @Column(precision = 12, scale = 2)
     private BigDecimal montantHT;
 

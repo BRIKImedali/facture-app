@@ -136,8 +136,8 @@ export default function StockForm() {
 
           <div className="form-grid">
             <div className="form-group">
-              <label>Quantité {isEdit && '(Utiliser Entrée/Sortie pour modifier le stock existant)'}</label>
-              <input className="form-control" type="number" min="0" name="quantite" value={form.quantite} onChange={hc} disabled={isEdit} />
+              <label>Quantité</label>
+              <input className="form-control" type="number" min="0" name="quantite" value={form.quantite} onChange={hc} />
             </div>
             <div className="form-group">
               <label>Seuil minimum d'alerte</label>

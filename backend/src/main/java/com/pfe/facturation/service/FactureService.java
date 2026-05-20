@@ -8,6 +8,7 @@ import com.pfe.facturation.entity.*;
 import com.pfe.facturation.exception.ResourceNotFoundException;
 import com.pfe.facturation.repository.BonLivraisonRepository;
 import com.pfe.facturation.repository.ClientRepository;
+import com.pfe.facturation.repository.CommandeRepository;
 import com.pfe.facturation.repository.FactureRepository;
 import com.pfe.facturation.repository.ProduitRepository;
 import com.pfe.facturation.security.entity.User;
@@ -22,6 +23,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.PageRequest;
 
@@ -36,17 +38,20 @@ public class FactureService {
     private final ClientRepository clientRepository;
     private final ProduitRepository produitRepository;
     private final BonLivraisonRepository bonLivraisonRepository;
+    private final CommandeRepository commandeRepository;
     private final ClientService clientService;
 
     public FactureService(FactureRepository factureRepository,
                           ClientRepository clientRepository,
                           ProduitRepository produitRepository,
                           BonLivraisonRepository bonLivraisonRepository,
+                          CommandeRepository commandeRepository,
                           ClientService clientService) {
         this.factureRepository = factureRepository;
         this.clientRepository = clientRepository;
         this.produitRepository = produitRepository;
         this.bonLivraisonRepository = bonLivraisonRepository;
+        this.commandeRepository = commandeRepository;
         this.clientService = clientService;
     }
 
@@ -167,6 +172,7 @@ public class FactureService {
         Facture facture = Facture.builder()
                 .numero(numero)
                 .client(commande.getClient())
+                .commande(commande)
                 .statut(StatutFacture.BROUILLON)
                 .notes("Facture générée automatiquement depuis la commande " + commande.getReference())
                 .remise(remise.compareTo(BigDecimal.ZERO) > 0 ? remise : null)
@@ -198,6 +204,90 @@ public class FactureService {
 
         log.info("Facture {} créée automatiquement depuis commande {}", numero, commande.getReference());
         return toDTO(withLignes);
+    }
+
+    // ===== Création depuis une Commande via endpoint API =====
+
+    public FactureResponseDTO creerDepuisCommandeId(Long commandeId, User creator) {
+        Commande commande = commandeRepository.findById(commandeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Commande introuvable : " + commandeId));
+
+        factureRepository.findByCommandeId(commandeId).ifPresent(f -> {
+            throw new IllegalStateException(
+                    "Une facture existe déjà pour cette commande (facture " + f.getNumero() + ").");
+        });
+
+        String numero = generateNumero();
+        BigDecimal remise = commande.getRemise() != null ? commande.getRemise() : BigDecimal.ZERO;
+
+        Facture facture = Facture.builder()
+                .numero(numero)
+                .client(commande.getClient())
+                .commande(commande)
+                .createdBy(creator)
+                .statut(StatutFacture.BROUILLON)
+                .notes("Facture générée depuis la commande " + commande.getReference())
+                .remise(remise.compareTo(BigDecimal.ZERO) > 0 ? remise : null)
+                .totalHT(commande.getTotalHT())
+                .totalHT_apres_remise(commande.getTotalHT_apres_remise())
+                .totalTva(commande.getTotalTva())
+                .totalTTC(commande.getTotalTTC())
+                .paymentMethod(commande.getPaymentMethod())
+                .build();
+
+        Facture savedFacture = factureRepository.save(facture);
+
+        List<LigneFacture> lignes = commande.getLignes().stream()
+                .map(lc -> LigneFacture.builder()
+                        .facture(savedFacture)
+                        .produit(lc.getProduit())
+                        .designation(lc.getDesignation())
+                        .quantite(lc.getQuantite())
+                        .prixUnitaireHT(lc.getPrixUnitaireHT())
+                        .tauxTva(lc.getTauxTva())
+                        .montantHT(lc.getMontantHT())
+                        .montantTva(lc.getMontantTva())
+                        .montantTTC(lc.getMontantTTC())
+                        .build())
+                .toList();
+
+        savedFacture.getLignes().addAll(lignes);
+        Facture withLignes = factureRepository.save(savedFacture);
+
+        log.info("Facture {} créée manuellement depuis commande {} par {}", numero, commande.getReference(),
+                creator != null ? creator.getUsername() : "système");
+        return toDTO(withLignes);
+    }
+
+    // ===== Création depuis un seul Bon de Livraison =====
+
+    public FactureResponseDTO creerDepuisUnBL(Long blId, User creator) {
+        BonLivraison bl = bonLivraisonRepository.findById(blId)
+                .orElseThrow(() -> new ResourceNotFoundException("Bon de livraison introuvable : " + blId));
+
+        if (bl.getStatut() != StatutBonLivraison.LIVRE) {
+            throw new IllegalStateException("Le bon de livraison n'est pas encore livré.");
+        }
+        if (bl.getFacture() != null) {
+            throw new IllegalStateException(
+                    "Une facture existe déjà pour ce bon de livraison (facture " + bl.getFacture().getNumero() + ").");
+        }
+
+        CreateFactureDepuisBLRequest req = new CreateFactureDepuisBLRequest(
+                bl.getClient().getId(),
+                List.of(blId),
+                null,
+                "Facture générée depuis le bon de livraison " + bl.getNumero(),
+                null
+        );
+        return creerDepuisBonsLivraison(req, creator);
+    }
+
+    // ===== Lecture : facture liée à une commande =====
+
+    @Transactional(readOnly = true)
+    public Optional<FactureResponseDTO> findByCommande(Long commandeId) {
+        return factureRepository.findByCommandeId(commandeId).map(this::toDTO);
     }
 
     // ===== Création depuis des Bons de Livraison (facturation groupée) =====
@@ -422,7 +512,9 @@ public class FactureService {
                 f.getTotalTva(),
                 f.getTotalTTC(),
                 f.getPaymentMethod() != null ? f.getPaymentMethod().name() : null,
-                f.getType() != null ? f.getType().name() : TypeFacture.CLASSIQUE.name()
+                f.getType() != null ? f.getType().name() : TypeFacture.CLASSIQUE.name(),
+                f.getCommande() != null ? f.getCommande().getId() : null,
+                f.getCommande() != null ? f.getCommande().getReference() : null
         );
     }
 

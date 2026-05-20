@@ -22,7 +22,9 @@ public record FactureResponseDTO(
         BigDecimal totalTva,
         BigDecimal totalTTC,
         String paymentMethod,
-        String type
+        String type,
+        Long commandeId,
+        String commandeReference
 ) {
 
     /** DTO d'une ligne de facture dans la réponse */

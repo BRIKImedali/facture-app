@@ -30,6 +30,7 @@ public record CreateCommandeRequest(
             @NotBlank(message = "La désignation est obligatoire") String designation,
             @NotNull @Min(1) Integer quantite,
             @NotNull BigDecimal prixUnitaireHT,
-            @NotNull Double tauxTva
+            @NotNull Double tauxTva,
+            @DecimalMin(value = "0.0") @DecimalMax(value = "100.0") BigDecimal remiseLigne
     ) {}
 }

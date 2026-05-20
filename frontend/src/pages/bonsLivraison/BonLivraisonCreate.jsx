@@ -117,6 +117,27 @@ const BonLivraisonCreate = () => {
     }
   };
 
+  const thStyle = {
+    padding: '0.75rem 0.75rem',
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    color: '#475569',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    whiteSpace: 'nowrap',
+  };
+
+  const inputBase = {
+    width: '100%',
+    border: '1.5px solid #e2e8f0',
+    borderRadius: '6px',
+    padding: '6px 8px',
+    fontSize: '0.9rem',
+    background: '#fff',
+    boxSizing: 'border-box',
+    outline: 'none',
+  };
+
   return (
     <div style={{ maxWidth: 900 }}>
       <div className="page-header">
@@ -193,13 +214,13 @@ const BonLivraisonCreate = () => {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Désignation</th>
-                  <th style={{ width: 80 }}>Qté</th>
-                  <th style={{ width: 120 }}>PU HT</th>
-                  <th style={{ width: 80 }}>TVA %</th>
-                  <th style={{ width: 110 }}>Mont. HT</th>
-                  <th style={{ width: 110 }}>Mont. TTC</th>
-                  <th style={{ width: 50 }}></th>
+                  <th style={thStyle}>Désignation</th>
+                  <th style={{ ...thStyle, width: '80px' }}>Qté</th>
+                  <th style={{ ...thStyle, width: '110px' }}>PU HT</th>
+                  <th style={{ ...thStyle, width: '90px' }}>TVA %</th>
+                  <th style={{ ...thStyle, width: '110px' }}>Mont. HT</th>
+                  <th style={{ ...thStyle, width: '110px' }}>Mont. TTC</th>
+                  <th style={{ width: '40px' }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -212,7 +233,7 @@ const BonLivraisonCreate = () => {
                         onChange={e => updateLigne(i, 'designation', e.target.value)}
                         placeholder="Désignation"
                         required
-                        style={{ width: '100%', border: 'none', background: 'transparent', fontSize: '0.9rem' }}
+                        style={inputBase}
                       />
                     </td>
                     <td>
@@ -221,7 +242,7 @@ const BonLivraisonCreate = () => {
                         min={1}
                         value={l.quantite}
                         onChange={e => updateLigne(i, 'quantite', e.target.value)}
-                        style={{ width: '100%', border: 'none', background: 'transparent', textAlign: 'center' }}
+                        style={{ ...inputBase, textAlign: 'center' }}
                       />
                     </td>
                     <td>
@@ -231,7 +252,7 @@ const BonLivraisonCreate = () => {
                         min={0}
                         value={l.prixUnitaireHT}
                         onChange={e => updateLigne(i, 'prixUnitaireHT', e.target.value)}
-                        style={{ width: '100%', border: 'none', background: 'transparent', textAlign: 'right' }}
+                        style={{ ...inputBase, textAlign: 'right' }}
                       />
                     </td>
                     <td>
@@ -241,7 +262,7 @@ const BonLivraisonCreate = () => {
                         min={0}
                         value={l.tauxTva}
                         onChange={e => updateLigne(i, 'tauxTva', e.target.value)}
-                        style={{ width: '100%', border: 'none', background: 'transparent', textAlign: 'center' }}
+                        style={{ ...inputBase, textAlign: 'center' }}
                       />
                     </td>
                     <td style={{ textAlign: 'right', fontSize: '0.85rem', color: '#64748b' }}>{fmt(l.montantHT)}</td>

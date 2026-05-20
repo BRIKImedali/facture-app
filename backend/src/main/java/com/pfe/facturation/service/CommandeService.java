@@ -258,11 +258,6 @@ public class CommandeService {
         log.info("Commande {} : statut {} → {} (paymentMethod={})",
                 commande.getReference(), ancienStatut, nouveauStatut, commande.getPaymentMethod());
 
-        // ── Flux automatique : VALIDEE → création d'une Facture ───────────────
-        if (nouveauStatut == StatutCommande.VALIDEE) {
-            factureService.creerDepuisCommande(saved);
-        }
-
         return toDTO(saved);
     }
 
@@ -322,7 +317,7 @@ public class CommandeService {
         for (var lreq : reqs) {
             lignes.add(buildLigneBase(
                     lreq.produitId(), lreq.designation(),
-                    lreq.quantite(), lreq.prixUnitaireHT(), lreq.tauxTva(), commande));
+                    lreq.quantite(), lreq.prixUnitaireHT(), lreq.tauxTva(), lreq.remiseLigne(), commande));
         }
         return lignes;
     }
@@ -333,16 +328,26 @@ public class CommandeService {
         for (var lreq : reqs) {
             lignes.add(buildLigneBase(
                     lreq.produitId(), lreq.designation(),
-                    lreq.quantite(), lreq.prixUnitaireHT(), lreq.tauxTva(), commande));
+                    lreq.quantite(), lreq.prixUnitaireHT(), lreq.tauxTva(), lreq.remiseLigne(), commande));
         }
         return lignes;
     }
 
     private LigneCommande buildLigneBase(Long produitId, String designation,
                                           int quantite, BigDecimal prixHT, Double tauxTva,
-                                          Commande commande) {
+                                          BigDecimal remiseLigne, Commande commande) {
         BigDecimal qte = new BigDecimal(quantite);
-        BigDecimal montantHT = prixHT.multiply(qte).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal montantHTBrut = prixHT.multiply(qte).setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal montantHT;
+        if (remiseLigne != null && remiseLigne.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal facteur = BigDecimal.ONE.subtract(
+                    remiseLigne.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP));
+            montantHT = montantHTBrut.multiply(facteur).setScale(2, RoundingMode.HALF_UP);
+        } else {
+            montantHT = montantHTBrut;
+        }
+
         BigDecimal montantTva = montantHT
                 .multiply(BigDecimal.valueOf(tauxTva))
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
@@ -360,6 +365,7 @@ public class CommandeService {
                 .quantite(quantite)
                 .prixUnitaireHT(prixHT)
                 .tauxTva(tauxTva)
+                .remiseLigne(remiseLigne != null && remiseLigne.compareTo(BigDecimal.ZERO) > 0 ? remiseLigne : null)
                 .montantHT(montantHT)
                 .montantTva(montantTva)
                 .montantTTC(montantHT.add(montantTva))
@@ -387,6 +393,7 @@ public class CommandeService {
                         l.getQuantite(),
                         l.getPrixUnitaireHT(),
                         l.getTauxTva(),
+                        l.getRemiseLigne(),
                         l.getMontantHT(),
                         l.getMontantTva(),
                         l.getMontantTTC()
