@@ -21,16 +21,17 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptor pour gérer les erreurs globales (ex: 401 Unauthorized)
+// Interceptor pour gérer les erreurs globales
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      // Token expiré ou invalide : deconnexion
+    if (error.response?.status === 401) {
+      // Token expiré ou invalide → déconnexion
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login'; 
+      window.location.href = '/login';
     }
+    // 403 = authentifié mais pas autorisé → ne pas déconnecter, laisser le composant gérer
     return Promise.reject(error);
   }
 );

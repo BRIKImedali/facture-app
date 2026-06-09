@@ -217,3 +217,67 @@
   gap: 1rem;
   background: #1a1a1a;
 }
+
+/* Avertissement dépendances */
+.role-modal__deps-warning {
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  background: rgba(234, 179, 8, 0.07);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  border-radius: 8px;
+}
+
+.role-modal__deps-warning-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.role-modal__deps-warning-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #fbbf24;
+}
+
+.role-modal__deps-warning-desc {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.5;
+}
+
+.role-modal__deps-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 0.75rem;
+}
+
+.role-modal__deps-badge {
+  padding: 3px 10px;
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fbbf24;
+  font-family: monospace;
+}
+
+.role-modal__deps-btn {
+  padding: 6px 14px;
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  border-radius: 6px;
+  color: #fbbf24;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.role-modal__deps-btn:hover {
+  background: rgba(234, 179, 8, 0.22);
+  border-color: rgba(234, 179, 8, 0.6);
+}

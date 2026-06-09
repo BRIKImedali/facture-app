@@ -5,10 +5,20 @@ import { roleService, permissionService } from '../../../services/adminService';
 import toast from 'react-hot-toast';
 import './RoleManagement.css';
 
-/**
- * Interface de gestion des rôles avec matrice de permissions.
- * Permet de créer, modifier, supprimer des rôles et d'assigner des permissions.
- */
+// Dépendances entre permissions : si on coche X, il faut aussi avoir Y
+const PERMISSION_DEPENDENCIES = {
+  'FACTURE:CREATE':       ['CLIENT:READ', 'PRODUIT:READ', 'TVA:READ'],
+  'FACTURE:UPDATE':       ['CLIENT:READ', 'PRODUIT:READ', 'TVA:READ'],
+  'BON_LIVRAISON:CREATE': ['CLIENT:READ', 'PRODUIT:READ'],
+  'BON_LIVRAISON:UPDATE': ['CLIENT:READ', 'PRODUIT:READ'],
+  'COMMANDE:CREATE':      ['CLIENT:READ', 'PRODUIT:READ', 'TVA:READ'],
+  'COMMANDE:UPDATE':      ['CLIENT:READ', 'PRODUIT:READ', 'TVA:READ'],
+  'DEVIS:CREATE':         ['CLIENT:READ', 'PRODUIT:READ', 'TVA:READ'],
+  'DEVIS:UPDATE':         ['CLIENT:READ', 'PRODUIT:READ', 'TVA:READ'],
+};
+
+const getPermKey = (perm) => perm.name || `${perm.entity}:${perm.action}`;
+
 const RoleManagement = () => {
   const { t } = useTranslation();
   const [roles, setRoles] = useState([]);
@@ -117,6 +127,28 @@ const RoleManagement = () => {
     setSelectedPermIds(prev =>
       prev.includes(permId) ? prev.filter(id => id !== permId) : [...prev, permId]
     );
+  };
+
+  const getMissingDependencies = () => {
+    const selectedKeys = permissions
+      .filter(p => selectedPermIds.includes(p.id))
+      .map(getPermKey);
+    const missing = new Set();
+    for (const key of selectedKeys) {
+      for (const dep of (PERMISSION_DEPENDENCIES[key] || [])) {
+        if (!selectedKeys.includes(dep)) missing.add(dep);
+      }
+    }
+    return Array.from(missing);
+  };
+
+  const addMissingDependencies = () => {
+    const missing = getMissingDependencies();
+    const missingIds = permissions
+      .filter(p => missing.includes(getPermKey(p)))
+      .map(p => p.id);
+    setSelectedPermIds(prev => [...new Set([...prev, ...missingIds])]);
+    toast.success(`${missingIds.length} permission(s) ajoutée(s) automatiquement`);
   };
 
   const toggleEntityPermissions = (entity) => {
@@ -243,7 +275,6 @@ const RoleManagement = () => {
                     className="role-modal__input"
                     value={formData.name}
                     onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
-                    placeholder="Ex: COMPTABLE"
                   />
                   {formData.name && (
                     <span className="role-modal__hint">
@@ -257,7 +288,6 @@ const RoleManagement = () => {
                     className="role-modal__input"
                     value={formData.description}
                     onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
-                    placeholder="Description du rôle..."
                   />
                 </div>
               </div>
@@ -308,6 +338,31 @@ const RoleManagement = () => {
               <div className="role-modal__counter">
                 <span className="badge badge-primary">{selectedPermIds.length} permission(s) sélectionnée(s)</span>
               </div>
+
+              {/* Avertissement dépendances manquantes */}
+              {(() => {
+                const missing = getMissingDependencies();
+                if (missing.length === 0) return null;
+                return (
+                  <div className="role-modal__deps-warning">
+                    <div className="role-modal__deps-warning-header">
+                      <span>⚠️</span>
+                      <span className="role-modal__deps-warning-title">Dépendances manquantes</span>
+                    </div>
+                    <p className="role-modal__deps-warning-desc">
+                      Les permissions suivantes sont requises par les fonctionnalités sélectionnées mais ne sont pas cochées :
+                    </p>
+                    <div className="role-modal__deps-list">
+                      {missing.map(dep => (
+                        <span key={dep} className="role-modal__deps-badge">{dep}</span>
+                      ))}
+                    </div>
+                    <button className="role-modal__deps-btn" onClick={addMissingDependencies}>
+                      ✚ Ajouter automatiquement
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Footer */}

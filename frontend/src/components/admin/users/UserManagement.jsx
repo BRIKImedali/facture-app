@@ -115,8 +115,16 @@ const UserManagement = () => {
   };
 
   const handleCreateUser = async () => {
-    if (!newUser.username || !newUser.password || newUser.password.length < 8 || newUser.roleIds.length === 0) {
-      toast.error('Veuillez remplir tous les champs obligatoires et sélectionner au moins un rôle');
+    if (!newUser.username) {
+      toast.error('Veuillez saisir un identifiant');
+      return;
+    }
+    if (!newUser.password || newUser.password.length < 8) {
+      toast.error('Le mot de passe doit contenir au moins 8 caractères');
+      return;
+    }
+    if (newUser.roleIds.length === 0) {
+      toast.error('Veuillez sélectionner au moins un rôle');
       return;
     }
     try {
@@ -361,7 +369,6 @@ const UserManagement = () => {
                   className="form-input"
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
-                  placeholder="Minimum 8 caractères"
                   minLength={8}
                 />
               </div>
@@ -398,7 +405,6 @@ const UserManagement = () => {
                   className="form-input"
                   value={newUser.username}
                   onChange={e => setNewUser({ ...newUser, username: e.target.value })}
-                  placeholder="USR-001"
                 />
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
@@ -428,7 +434,6 @@ const UserManagement = () => {
                   className="form-input"
                   value={newUser.password}
                   onChange={e => setNewUser({ ...newUser, password: e.target.value })}
-                  placeholder="Minimum 8 caractères"
                 />
               </div>
               <div className="form-group">

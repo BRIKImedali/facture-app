@@ -46,6 +46,13 @@ const FactureCreate = () => {
         setClients(cRes.data);
         setProduits(pRes.data);
         setTauxTvaList(tRes.data);
+      })
+      .catch((err) => {
+        if (err.response?.status === 403) {
+          toast.error('Permissions insuffisantes pour charger les données (clients, produits, TVA)');
+        } else {
+          toast.error('Erreur lors du chargement des données');
+        }
       });
   }, []);
 
@@ -252,7 +259,6 @@ const FactureCreate = () => {
                   options={clients}
                   valueKey="id"
                   renderLabel={c => `${c.nom}${c.email ? ` (${c.email})` : ''}`}
-                  placeholder="— Sélectionner un client —"
                   required
                 />
               </div>
@@ -356,7 +362,6 @@ const FactureCreate = () => {
                   <div style={{ gridColumn: '1 / -1' }}>
                     <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: 4 }}>Notes</label>
                     <textarea rows={2} value={blNotes} onChange={e => setBlNotes(e.target.value)}
-                      placeholder="Observations sur la facture groupée..."
                       style={{ width: '100%', padding: '0.5rem', border: '1px solid #e2e8f0', borderRadius: 8, resize: 'vertical' }} />
                   </div>
                 </div>
@@ -429,7 +434,6 @@ const FactureCreate = () => {
                 options={clients}
                 valueKey="id"
                 renderLabel={c => `${c.nom}${c.email ? ` (${c.email})` : ''}`}
-                placeholder="— Sélectionner un client —"
                 required
               />
             </div>
@@ -450,12 +454,12 @@ const FactureCreate = () => {
               <label>Remise globale (%)</label>
               <input type="number" min="0" max="100" step="0.5" value={remise}
                 onChange={e => setRemise(e.target.value)} className="form-control"
-                placeholder="0 = aucune remise" />
+                />
             </div>
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label>Notes / Conditions de paiement</label>
               <textarea value={notes} onChange={e => setNotes(e.target.value)} className="form-control" rows={2}
-                placeholder="Ex: Paiement sous 30 jours. RIB: ..." />
+                />
             </div>
           </div>
         </div>
@@ -491,7 +495,6 @@ const FactureCreate = () => {
                         options={produits}
                         valueKey="id"
                         labelKey="nom"
-                        placeholder="— Manuel —"
                       />
                     </td>
                     <td>
@@ -499,7 +502,6 @@ const FactureCreate = () => {
                         value={l.designation}
                         onChange={e => handleLigneChange(i, 'designation', e.target.value)}
                         style={inputBase}
-                        placeholder="Description..."
                         required
                       />
                     </td>
@@ -517,7 +519,6 @@ const FactureCreate = () => {
                         value={l.prixUnitaireHT}
                         onChange={e => handleLigneChange(i, 'prixUnitaireHT', e.target.value)}
                         style={{ ...inputBase, textAlign: 'right' }}
-                        placeholder="0.00"
                         required
                       />
                     </td>
